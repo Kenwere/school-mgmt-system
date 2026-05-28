@@ -16,6 +16,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
 
+import { AuthProvider, useAuth } from "@/lib/auth";
 import appCss from "../styles.css?url";
 
 function NotFoundComponent() {
@@ -67,8 +68,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:title", content: "School Management System" },
       { property: "og:description", content: "All-in-one school management platform: students, staff, academics, fees, communication and operations." },
       { name: "twitter:description", content: "All-in-one school management platform: students, staff, academics, fees, communication and operations." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/755dd2c6-5d45-487c-b545-e0f77d2349b7/id-preview-cacfcc8d--fc047433-6ddb-4764-a8d2-889439fb538a.lovable.app-1779967890174.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/755dd2c6-5d45-487c-b545-e0f77d2349b7/id-preview-cacfcc8d--fc047433-6ddb-4764-a8d2-889439fb538a.lovable.app-1779967890174.png" },
+      { property: "og:image", content: "https://images.unsplash.com/photo-1557804506-669a67965ba0?auto=format&fit=crop&w=1200&q=80" },
+      { name: "twitter:image", content: "https://images.unsplash.com/photo-1557804506-669a67965ba0?auto=format&fit=crop&w=1200&q=80" },
       { name: "twitter:card", content: "summary_large_image" },
       { property: "og:type", content: "website" },
     ],
@@ -94,10 +95,22 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <SidebarProvider>
-        <div className="flex min-h-screen w-full bg-background">
-          <AppSidebar />
-          <div className="flex flex-1 flex-col">
+      <AuthProvider>
+        <RootShellContent />
+      </AuthProvider>
+    </QueryClientProvider>
+  );
+}
+
+function RootShellContent() {
+  const auth = useAuth();
+
+  return (
+    <SidebarProvider>
+      <div className="flex min-h-screen w-full bg-background">
+        {auth.user ? <AppSidebar /> : null}
+        <div className="flex flex-1 flex-col">
+          {auth.user ? (
             <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-card px-4">
               <SidebarTrigger />
               <div className="relative hidden flex-1 max-w-md md:block">
@@ -109,24 +122,27 @@ function RootComponent() {
                   <Bell className="h-4 w-4" />
                   <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-destructive" />
                 </Button>
-                <div className="flex items-center gap-2 rounded-md px-2 py-1">
+                <div className="hidden sm:flex items-center gap-2 rounded-md px-2 py-1">
                   <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-primary text-primary-foreground text-xs">DM</AvatarFallback>
+                    <AvatarFallback className="bg-primary text-primary-foreground text-xs">AD</AvatarFallback>
                   </Avatar>
                   <div className="hidden text-left text-xs leading-tight sm:block">
-                    <div className="font-medium">David Mwema</div>
-                    <div className="text-muted-foreground">Principal</div>
+                    <div className="font-medium">{auth.user.email}</div>
+                    <div className="text-muted-foreground">{auth.user.role === "admin" ? "Administrator" : auth.user.role}</div>
                   </div>
                 </div>
+                <Button variant="outline" size="sm" onClick={auth.signOut}>
+                  Sign out
+                </Button>
               </div>
             </header>
-            <main className="flex-1">
-              <Outlet />
-            </main>
-          </div>
+          ) : null}
+          <main className="flex-1">
+            <Outlet />
+          </main>
         </div>
-        <Toaster />
-      </SidebarProvider>
-    </QueryClientProvider>
+      </div>
+      <Toaster />
+    </SidebarProvider>
   );
 }
