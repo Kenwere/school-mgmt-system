@@ -1,276 +1,227 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { FormEvent, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { useState } from "react";
 import {
   Users,
   GraduationCap,
   BookOpen,
-  CalendarCheck,
-  AlertCircle,
-  CheckCircle2,
+  Wallet,
+  ClipboardCheck,
+  Award,
   Printer,
+  ShieldCheck,
+  School,
 } from "lucide-react";
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth";
-import { formatKES } from "@/lib/supabase";
-import { fetchDashboardStats } from "@/lib/supabase-helpers";
+import { formatKES, feeStatusForStudent, useStore } from "@/lib/store";
 
 export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: "School Management" },
-      { name: "description", content: "School landing page and administration dashboard backed by Supabase." },
-    ],
-  }),
+  head: () => ({ meta: [{ title: "School Management System" }] }),
   component: HomePage,
 });
 
 function HomePage() {
   const auth = useAuth();
-  const dashboardQuery = useQuery({
-    queryKey: ["dashboard-stats"],
-    queryFn: fetchDashboardStats,
-    enabled: auth.user?.role === "admin",
-  });
+  if (!auth.user) return <Landing />;
+  return <Dashboard />;
+}
 
-  if (!auth.user) {
-    return <LandingView />;
-  }
+function Landing() {
+  const router = useRouter();
+  const store = useStore();
+  const hasSchool = !!store.school;
 
-  if (auth.user.role !== "admin") {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background px-6 py-12">
-        <Card className="w-full max-w-2xl">
-          <CardHeader>
-            <CardTitle>Access Restricted</CardTitle>
-            <CardDescription>
-              Student and teacher sign-in is visible here, but only the admin account can manage the dashboard.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Use <strong>admin@gmail.com</strong> and password <strong>admin</strong> to sign in as the administrator.
-            </p>
-          </CardContent>
-          <CardFooter>
-            <Button variant="outline" onClick={auth.signOut}>
-              Go back to landing
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted">
+      <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
+        <div className="flex items-center gap-2">
+          <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
+            <School className="h-5 w-5" />
+          </div>
+          <span className="font-semibold tracking-tight">SchoolSuite</span>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="ghost" onClick={() => router.navigate({ to: "/login" })}>
+            Sign in
+          </Button>
+          {!hasSchool && (
+            <Button onClick={() => router.navigate({ to: "/register" })}>
+              Register your school
             </Button>
-          </CardFooter>
-        </Card>
-      </div>
-    );
-  }
+          )}
+        </div>
+      </header>
 
-  const stats = dashboardQuery.data;
+      <section className="mx-auto max-w-6xl px-6 pb-20 pt-16">
+        <div className="grid items-center gap-12 md:grid-cols-2">
+          <div>
+            <span className="inline-flex rounded-full border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
+              Modern school management
+            </span>
+            <h1 className="mt-4 text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
+              Run your school from one calm, professional cockpit.
+            </h1>
+            <p className="mt-4 max-w-xl text-base leading-7 text-muted-foreground">
+              Enrol students, manage classes, capture exam marks with automatic ranking,
+              and track termly fee balances — all in a clean, printable workspace built
+              for administrators and teachers.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              {hasSchool ? (
+                <Button size="lg" onClick={() => router.navigate({ to: "/login" })}>
+                  Sign in to {store.school?.name}
+                </Button>
+              ) : (
+                <Button size="lg" onClick={() => router.navigate({ to: "/register" })}>
+                  Get started — register your school
+                </Button>
+              )}
+              <Button size="lg" variant="outline" onClick={() => router.navigate({ to: "/login" })}>
+                I already have an account
+              </Button>
+            </div>
+            <p className="mt-6 text-xs text-muted-foreground">
+              Demo build — data is stored on this device only.
+            </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FeatureCard icon={Users} title="Students & staff" body="Admissions, profiles, transfers and a clean roster." />
+            <FeatureCard icon={Award} title="Exams & ranking" body="Record marks per exam — rankings update instantly." />
+            <FeatureCard icon={Wallet} title="Termly fees" body="Class fee split across 3 terms with live balances." />
+            <FeatureCard icon={Printer} title="Printable reports" body="Report cards, fee statements, class & student lists." />
+            <FeatureCard icon={ShieldCheck} title="Role permissions" body="Admin grants teachers access to just the pages they need." />
+            <FeatureCard icon={ClipboardCheck} title="Per-term tracking" body="See paid amount and balance for each term, per student." />
+          </div>
+        </div>
+      </section>
+
+      <footer className="border-t bg-card/50">
+        <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-2 px-6 py-6 sm:flex-row sm:items-center">
+          <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} SchoolSuite. All rights reserved.</p>
+          <div className="flex gap-4 text-sm">
+            <Link to="/login" className="text-muted-foreground hover:text-foreground">Sign in</Link>
+            {!hasSchool && (
+              <Link to="/register" className="text-muted-foreground hover:text-foreground">Register</Link>
+            )}
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+function FeatureCard({ icon: Icon, title, body }: { icon: any; title: string; body: string }) {
+  return (
+    <Card className="border-muted/60">
+      <CardHeader className="pb-2">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary">
+            <Icon className="h-4 w-4" />
+          </div>
+          <CardTitle className="text-sm font-semibold">{title}</CardTitle>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <CardDescription className="text-sm">{body}</CardDescription>
+      </CardContent>
+    </Card>
+  );
+}
+
+function Dashboard() {
+  const store = useStore();
+  const studentCount = store.students.length;
+  const classCount = store.classes.length;
+  const examCount = store.exams.length;
+  const teacherCount = store.users.filter((u) => u.role === "teacher").length;
+
+  const feeAgg = store.students.reduce(
+    (acc, st) => {
+      const fs = feeStatusForStudent(st.id);
+      if (!fs) return acc;
+      acc.paid += fs.paidTotal;
+      acc.balance += Math.max(0, fs.balanceTotal);
+      return acc;
+    },
+    { paid: 0, balance: 0 },
+  );
+
+  const studentsByClass = store.classes.map((c) => ({
+    name: c.name,
+    count: store.students.filter((s) => s.classId === c.id).length,
+  }));
 
   return (
     <>
       <PageHeader
-        title="Admin Dashboard"
-        description="Manage classes, students and fee reports from Supabase." 
+        title="Dashboard"
+        description="Snapshot of your school today."
         actions={
           <Button variant="outline" onClick={() => window.print()}>
-            <Printer className="h-4 w-4" />
-            Print report
+            <Printer className="h-4 w-4" /> Print
           </Button>
         }
       />
       <div className="space-y-6 p-6">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            label="Total Students"
-            value={stats ? stats.studentCount.toLocaleString() : "—"}
-            hint={stats ? `${stats.activeStudentCount} active` : "Loading…"}
-            icon={Users}
-          />
-          <StatCard
-            label="Active Students"
-            value={stats ? stats.activeStudentCount.toLocaleString() : "—"}
-            hint="Live from Supabase"
-            icon={GraduationCap}
-            tone="success"
-          />
-          <StatCard
-            label="Active Classes"
-            value={stats ? stats.classCount.toString() : "—"}
-            hint="Includes saved classes"
-            icon={BookOpen}
-          />
-          <StatCard
-            label="Attendance Estimate"
-            value={stats ? `${stats.attendancePercent}%` : "—"}
-            hint="Based on active students"
-            icon={CalendarCheck}
-            tone="success"
-          />
+          <StatCard label="Students" value={studentCount.toLocaleString()} icon={Users} />
+          <StatCard label="Classes" value={classCount.toString()} icon={BookOpen} />
+          <StatCard label="Exams" value={examCount.toString()} icon={Award} />
+          <StatCard label="Teachers" value={teacherCount.toString()} icon={GraduationCap} />
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <StatCard label="Fees collected" value={formatKES(feeAgg.paid)} icon={Wallet} tone="success" />
+          <StatCard label="Outstanding balance" value={formatKES(feeAgg.balance)} icon={Wallet} tone="warning" />
           <StatCard
-            label="Fees Collected"
-            value={stats ? formatKES(stats.feesCollected) : "—"}
-            hint="Paid student balances"
-            icon={Users}
-            tone="success"
-          />
-          <StatCard
-            label="Fees Pending"
-            value={stats ? formatKES(stats.feesPending) : "—"}
-            hint="Unpaid or partial"
-            icon={AlertCircle}
-            tone="warning"
-          />
-          <StatCard
-            label="Average class fee"
-            value={stats?.classCount ? formatKES(Math.round((stats.feesCollected + stats.feesPending) / stats.classCount)) : "—"}
-            hint="Calculated from saved classes"
-            icon={BookOpen}
+            label="Collection rate"
+            value={`${
+              feeAgg.paid + feeAgg.balance > 0
+                ? Math.round((feeAgg.paid / (feeAgg.paid + feeAgg.balance)) * 100)
+                : 0
+            }%`}
+            icon={ClipboardCheck}
           />
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-3">
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>Students by class</CardTitle>
-              <CardDescription>Enrollment counts from Supabase.</CardDescription>
-            </CardHeader>
-            <CardContent>
+        <Card>
+          <CardHeader>
+            <CardTitle>Students by class</CardTitle>
+            <CardDescription>Enrollment per class.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {studentsByClass.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No classes yet. Add classes and students to see analytics.
+              </p>
+            ) : (
               <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={stats?.studentsByClass ?? []}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} />
-                  <XAxis dataKey="name" stroke="currentColor" className="text-xs text-muted-foreground" />
-                  <YAxis stroke="currentColor" className="text-xs text-muted-foreground" />
-                  <Tooltip contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }} />
-                  <Bar dataKey="count" fill="var(--accent)" radius={[4, 4, 0, 0]} />
+                <BarChart data={studentsByClass}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.4} />
+                  <XAxis dataKey="name" className="text-xs" />
+                  <YAxis className="text-xs" />
+                  <Tooltip />
+                  <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Fee status</CardTitle>
-              <CardDescription>Paid, partial and pending amounts.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {stats?.feesStatusBreakdown.map((item) => (
-                <div key={item.status} className="flex items-center justify-between gap-4 rounded-md border p-3">
-                  <div>
-                    <p className="text-sm font-medium">{item.status}</p>
-                    <p className="text-xs text-muted-foreground">{item.value} students</p>
-                  </div>
-                  <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium">{item.value}</span>
-                </div>
-              ))}
-              {!stats ? <p className="text-sm text-muted-foreground">Loading fee breakdown…</p> : null}
-            </CardContent>
-          </Card>
-        </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </>
-  );
-}
-
-function LandingView() {
-  const auth = useAuth();
-  const [role, setRole] = useState<"admin" | "teacher" | "student">("admin");
-  const [email, setEmail] = useState("admin@gmail.com");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-
-  const isAdmin = role === "admin";
-
-  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const success = await auth.signIn(email.trim(), password.trim(), role);
-    if (!success) {
-      setError("Invalid admin credentials. Please use admin@gmail.com / admin.");
-      return;
-    }
-    setError("");
-  };
-
-  return (
-    <div className="min-h-screen bg-slate-50 py-16 px-4">
-      <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1.4fr_1fr]">
-        <section className="rounded-[2rem] bg-white p-10 shadow-sm">
-          <div className="space-y-6">
-            <div>
-              <p className="text-sm uppercase tracking-[0.24em] text-primary">School Management</p>
-              <h1 className="mt-4 text-4xl font-semibold text-foreground">A simple Supabase-backed admin portal for your school.</h1>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
-                Securely manage students, classes and class fees. Sign in as admin to connect the dashboard directly to your Supabase data layer.
-              </p>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-3xl border border-muted/60 bg-muted/10 p-5">
-                <p className="text-sm font-semibold">Admin sign-in</p>
-                <p className="mt-2 text-sm text-muted-foreground">Use the admin credentials to manage school records.</p>
-              </div>
-              <div className="rounded-3xl border border-muted/60 bg-muted/10 p-5">
-                <p className="text-sm font-semibold">Live Supabase sync</p>
-                <p className="mt-2 text-sm text-muted-foreground">Add classes, student records and fees. All data is stored in Supabase.</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="rounded-[2rem] bg-white p-8 shadow-sm">
-          <div className="mb-6">
-            <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">Sign in</p>
-            <h2 className="mt-2 text-2xl font-semibold text-foreground">Choose your role to continue</h2>
-          </div>
-          <form className="space-y-4" onSubmit={submit}>
-            <label className="block text-sm font-medium text-muted-foreground">Role</label>
-            <select
-              className="flex h-11 w-full rounded-md border border-input bg-transparent px-3 text-base text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              value={role}
-              onChange={(event) => setRole(event.target.value as "admin" | "teacher" | "student")}
-            >
-              <option value="admin">Admin</option>
-              <option value="teacher">Teacher</option>
-              <option value="student">Student</option>
-            </select>
-
-            <div>
-              <label className="block text-sm font-medium text-muted-foreground">Email</label>
-              <Input
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="admin@gmail.com"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-muted-foreground">Password</label>
-              <Input
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder={isAdmin ? "admin" : "Enter any password"}
-              />
-            </div>
-
-            {error ? <p className="text-sm text-destructive">{error}</p> : null}
-
-            <Button type="submit" className="w-full">
-              Continue as {role}
-            </Button>
-            <p className="text-sm text-muted-foreground">
-              Admin can sign in with <strong>admin@gmail.com</strong> and <strong>admin</strong>. Teacher and student sign-in are available for future portal expansion.
-            </p>
-          </form>
-        </section>
-      </div>
-    </div>
   );
 }

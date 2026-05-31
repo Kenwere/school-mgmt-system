@@ -11,10 +11,15 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TransportRouteImport } from './routes/transport'
 import { Route as TimetableRouteImport } from './routes/timetable'
+import { Route as TeachersRouteImport } from './routes/teachers'
 import { Route as StudentsRouteImport } from './routes/students'
 import { Route as StaffRouteImport } from './routes/staff'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as ReportsRouteImport } from './routes/reports'
+import { Route as RegisterRouteImport } from './routes/register'
 import { Route as MessagesRouteImport } from './routes/messages'
+import { Route as MarksRouteImport } from './routes/marks'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as LibraryRouteImport } from './routes/library'
 import { Route as HostelRouteImport } from './routes/hostel'
 import { Route as GradesRouteImport } from './routes/grades'
@@ -35,6 +40,11 @@ const TimetableRoute = TimetableRouteImport.update({
   path: '/timetable',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TeachersRoute = TeachersRouteImport.update({
+  id: '/teachers',
+  path: '/teachers',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StudentsRoute = StudentsRouteImport.update({
   id: '/students',
   path: '/students',
@@ -50,9 +60,29 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ReportsRoute = ReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MessagesRoute = MessagesRouteImport.update({
   id: '/messages',
   path: '/messages',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MarksRoute = MarksRouteImport.update({
+  id: '/marks',
+  path: '/marks',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LibraryRoute = LibraryRouteImport.update({
@@ -111,10 +141,15 @@ export interface FileRoutesByFullPath {
   '/grades': typeof GradesRoute
   '/hostel': typeof HostelRoute
   '/library': typeof LibraryRoute
+  '/login': typeof LoginRoute
+  '/marks': typeof MarksRoute
   '/messages': typeof MessagesRoute
+  '/register': typeof RegisterRoute
+  '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
   '/staff': typeof StaffRoute
   '/students': typeof StudentsRoute
+  '/teachers': typeof TeachersRoute
   '/timetable': typeof TimetableRoute
   '/transport': typeof TransportRoute
 }
@@ -128,10 +163,15 @@ export interface FileRoutesByTo {
   '/grades': typeof GradesRoute
   '/hostel': typeof HostelRoute
   '/library': typeof LibraryRoute
+  '/login': typeof LoginRoute
+  '/marks': typeof MarksRoute
   '/messages': typeof MessagesRoute
+  '/register': typeof RegisterRoute
+  '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
   '/staff': typeof StaffRoute
   '/students': typeof StudentsRoute
+  '/teachers': typeof TeachersRoute
   '/timetable': typeof TimetableRoute
   '/transport': typeof TransportRoute
 }
@@ -146,10 +186,15 @@ export interface FileRoutesById {
   '/grades': typeof GradesRoute
   '/hostel': typeof HostelRoute
   '/library': typeof LibraryRoute
+  '/login': typeof LoginRoute
+  '/marks': typeof MarksRoute
   '/messages': typeof MessagesRoute
+  '/register': typeof RegisterRoute
+  '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
   '/staff': typeof StaffRoute
   '/students': typeof StudentsRoute
+  '/teachers': typeof TeachersRoute
   '/timetable': typeof TimetableRoute
   '/transport': typeof TransportRoute
 }
@@ -165,10 +210,15 @@ export interface FileRouteTypes {
     | '/grades'
     | '/hostel'
     | '/library'
+    | '/login'
+    | '/marks'
     | '/messages'
+    | '/register'
+    | '/reports'
     | '/settings'
     | '/staff'
     | '/students'
+    | '/teachers'
     | '/timetable'
     | '/transport'
   fileRoutesByTo: FileRoutesByTo
@@ -182,10 +232,15 @@ export interface FileRouteTypes {
     | '/grades'
     | '/hostel'
     | '/library'
+    | '/login'
+    | '/marks'
     | '/messages'
+    | '/register'
+    | '/reports'
     | '/settings'
     | '/staff'
     | '/students'
+    | '/teachers'
     | '/timetable'
     | '/transport'
   id:
@@ -199,10 +254,15 @@ export interface FileRouteTypes {
     | '/grades'
     | '/hostel'
     | '/library'
+    | '/login'
+    | '/marks'
     | '/messages'
+    | '/register'
+    | '/reports'
     | '/settings'
     | '/staff'
     | '/students'
+    | '/teachers'
     | '/timetable'
     | '/transport'
   fileRoutesById: FileRoutesById
@@ -217,10 +277,15 @@ export interface RootRouteChildren {
   GradesRoute: typeof GradesRoute
   HostelRoute: typeof HostelRoute
   LibraryRoute: typeof LibraryRoute
+  LoginRoute: typeof LoginRoute
+  MarksRoute: typeof MarksRoute
   MessagesRoute: typeof MessagesRoute
+  RegisterRoute: typeof RegisterRoute
+  ReportsRoute: typeof ReportsRoute
   SettingsRoute: typeof SettingsRoute
   StaffRoute: typeof StaffRoute
   StudentsRoute: typeof StudentsRoute
+  TeachersRoute: typeof TeachersRoute
   TimetableRoute: typeof TimetableRoute
   TransportRoute: typeof TransportRoute
 }
@@ -239,6 +304,13 @@ declare module '@tanstack/react-router' {
       path: '/timetable'
       fullPath: '/timetable'
       preLoaderRoute: typeof TimetableRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/teachers': {
+      id: '/teachers'
+      path: '/teachers'
+      fullPath: '/teachers'
+      preLoaderRoute: typeof TeachersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/students': {
@@ -262,11 +334,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/reports': {
+      id: '/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof ReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/messages': {
       id: '/messages'
       path: '/messages'
       fullPath: '/messages'
       preLoaderRoute: typeof MessagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/marks': {
+      id: '/marks'
+      path: '/marks'
+      fullPath: '/marks'
+      preLoaderRoute: typeof MarksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/library': {
@@ -345,23 +445,18 @@ const rootRouteChildren: RootRouteChildren = {
   GradesRoute: GradesRoute,
   HostelRoute: HostelRoute,
   LibraryRoute: LibraryRoute,
+  LoginRoute: LoginRoute,
+  MarksRoute: MarksRoute,
   MessagesRoute: MessagesRoute,
+  RegisterRoute: RegisterRoute,
+  ReportsRoute: ReportsRoute,
   SettingsRoute: SettingsRoute,
   StaffRoute: StaffRoute,
   StudentsRoute: StudentsRoute,
+  TeachersRoute: TeachersRoute,
   TimetableRoute: TimetableRoute,
   TransportRoute: TransportRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

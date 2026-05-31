@@ -1,16 +1,23 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Download } from "lucide-react";
+import { useState } from "react";
 import { PageHeader } from "@/components/page-header";
-import { Button } from "@/components/ui/button";
+import { PermissionGate } from "@/components/permission-gate";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { grades } from "@/lib/mock-data";
+import { Printer } from "lucide-react";
+import { gradeFromScore, rankingForExam, useStore } from "@/lib/store";
 
 export const Route = createFileRoute("/grades")({
-  head: () => ({ meta: [{ title: "Grades — Northfield Academy" }] }),
-  component: GradesPage,
+  head: () => ({ meta: [{ title: "Grades & ranking — School Management" }] }),
+  component: () => (
+    <PermissionGate path="/grades">
+      <GradesPage />
+    </PermissionGate>
+  ),
 });
 
 function gradeColor(g: string) {
@@ -21,26 +28,52 @@ function gradeColor(g: string) {
 }
 
 function GradesPage() {
+  const store = useStore();
+  const [examId, setExamId] = useState(store.exams[0]?.id ?? "");
+  const [classId, setClassId] = useState<string>("all");
+
+  const ranking = examId ? rankingForExam(examId, classId === "all" ? undefined : classId) : [];
+
   return (
     <>
       <PageHeader
-        title="Grades & Report Cards"
-        description="Marks entry, GPA calculation, ranking and transcripts."
+        title="Grades & ranking"
+        description="Auto-ranked from marks recorded against each exam."
         actions={
-          <>
-            <Select defaultValue="form4a">
-              <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="form4a">Form 4A</SelectItem>
-                <SelectItem value="form4b">Form 4B</SelectItem>
-                <SelectItem value="form3a">Form 3A</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant="outline"><Download className="h-4 w-4" />Report Cards</Button>
-          </>
+          <Button variant="outline" onClick={() => window.print()}>
+            <Printer className="h-4 w-4" /> Print
+          </Button>
         }
       />
-      <div className="p-6">
+      <div className="space-y-4 p-6">
+        <Card>
+          <CardContent className="grid gap-4 p-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Exam</Label>
+              <Select value={examId} onValueChange={setExamId}>
+                <SelectTrigger><SelectValue placeholder="Select an exam" /></SelectTrigger>
+                <SelectContent>
+                  {store.exams.map((e) => (
+                    <SelectItem key={e.id} value={e.id}>{e.name} — Term {e.term} {e.year}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Class</Label>
+              <Select value={classId} onValueChange={setClassId}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All classes</SelectItem>
+                  {store.classes.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardContent className="p-0">
             <Table>
@@ -48,29 +81,32 @@ function GradesPage() {
                 <TableRow>
                   <TableHead>Rank</TableHead>
                   <TableHead>Student</TableHead>
-                  <TableHead className="text-right">Math</TableHead>
-                  <TableHead className="text-right">English</TableHead>
-                  <TableHead className="text-right">Physics</TableHead>
-                  <TableHead className="text-right">Chemistry</TableHead>
-                  <TableHead className="text-right">Biology</TableHead>
+                  <TableHead>Class</TableHead>
+                  <TableHead className="text-right">Subjects</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
                   <TableHead className="text-right">Average</TableHead>
                   <TableHead>Grade</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {grades.sort((a, b) => a.rank - b.rank).map((g) => (
-                  <TableRow key={g.student}>
-                    <TableCell className="font-mono">#{g.rank}</TableCell>
-                    <TableCell className="font-medium">{g.student}</TableCell>
-                    <TableCell className="text-right tabular-nums">{g.math}</TableCell>
-                    <TableCell className="text-right tabular-nums">{g.eng}</TableCell>
-                    <TableCell className="text-right tabular-nums">{g.phy}</TableCell>
-                    <TableCell className="text-right tabular-nums">{g.chem}</TableCell>
-                    <TableCell className="text-right tabular-nums">{g.bio}</TableCell>
-                    <TableCell className="text-right font-semibold tabular-nums">{g.avg.toFixed(1)}</TableCell>
-                    <TableCell><Badge variant="outline" className={gradeColor(g.grade)}>{g.grade}</Badge></TableCell>
-                  </TableRow>
-                ))}
+                {ranking.length === 0 && (
+                  <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-10">No marks recorded for this selection yet.</TableCell></TableRow>
+                )}
+                {ranking.map((r) => {
+                  const cls = store.classes.find((c) => c.id === r.student.classId);
+                  const grade = gradeFromScore(r.avg);
+                  return (
+                    <TableRow key={r.student.id}>
+                      <TableCell className="font-mono">{r.rank ? `#${r.rank}` : "—"}</TableCell>
+                      <TableCell className="font-medium">{r.student.name}</TableCell>
+                      <TableCell>{cls?.name ?? "—"}</TableCell>
+                      <TableCell className="text-right tabular-nums">{r.count}</TableCell>
+                      <TableCell className="text-right tabular-nums">{r.total}</TableCell>
+                      <TableCell className="text-right tabular-nums">{r.avg.toFixed(1)}</TableCell>
+                      <TableCell><Badge variant="outline" className={gradeColor(grade)}>{grade}</Badge></TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </CardContent>
