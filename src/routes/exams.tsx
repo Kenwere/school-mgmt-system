@@ -1,55 +1,105 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus, ClipboardList, CheckCircle2, Clock } from "lucide-react";
+import { useState } from "react";
 import { PageHeader } from "@/components/page-header";
-import { StatCard } from "@/components/stat-card";
+import { PermissionGate } from "@/components/permission-gate";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { exams } from "@/lib/mock-data";
+import { Plus, Trash2 } from "lucide-react";
+import { addExam, deleteExam, useStore, type Term } from "@/lib/store";
 
 export const Route = createFileRoute("/exams")({
-  head: () => ({ meta: [{ title: "Exams — Northfield Academy" }] }),
-  component: ExamsPage,
+  head: () => ({ meta: [{ title: "Exams — School Management" }] }),
+  component: () => (
+    <PermissionGate path="/exams">
+      <ExamsPage />
+    </PermissionGate>
+  ),
 });
 
 function ExamsPage() {
+  const store = useStore();
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [term, setTerm] = useState<Term>(1);
+  const [year, setYear] = useState<number>(new Date().getFullYear());
+  const [date, setDate] = useState<string>(new Date().toISOString().slice(0, 10));
+
+  const save = () => {
+    if (!name.trim()) return;
+    addExam({ name: name.trim(), term, year, date });
+    setName("");
+    setOpen(false);
+  };
+
   return (
     <>
       <PageHeader
-        title="Examinations"
-        description="Schedule exams, manage question banks and publish results."
-        actions={<Button><Plus className="h-4 w-4" />Schedule Exam</Button>}
+        title="Exams"
+        description="Record each exam (about 2 per term). Marks are entered against an exam."
+        actions={
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button><Plus className="h-4 w-4" /> New exam</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add exam</DialogTitle>
+                <DialogDescription>e.g. "Mid Term 1", "End Term 1".</DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4 sm:grid-cols-2">
+                <div className="space-y-2 sm:col-span-2"><Label>Exam name</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Mid Term 1" /></div>
+                <div className="space-y-2">
+                  <Label>Term</Label>
+                  <Select value={String(term)} onValueChange={(v) => setTerm(Number(v) as Term)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">Term 1</SelectItem>
+                      <SelectItem value="2">Term 2</SelectItem>
+                      <SelectItem value="3">Term 3</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2"><Label>Year</Label><Input type="number" value={year} onChange={(e) => setYear(Number(e.target.value))} /></div>
+                <div className="space-y-2 sm:col-span-2"><Label>Date</Label><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
+              </div>
+              <DialogFooter><Button onClick={save}>Create</Button></DialogFooter>
+            </DialogContent>
+          </Dialog>
+        }
       />
-      <div className="space-y-6 p-6">
-        <div className="grid gap-4 sm:grid-cols-3">
-          <StatCard label="Scheduled" value="3" icon={Clock} tone="warning" />
-          <StatCard label="In Progress" value="0" icon={ClipboardList} />
-          <StatCard label="Completed (Term)" value="12" icon={CheckCircle2} tone="success" />
-        </div>
+      <div className="p-6">
         <Card>
           <CardContent className="p-0">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Exam</TableHead>
-                  <TableHead>Class</TableHead>
+                  <TableHead>Term</TableHead>
+                  <TableHead>Year</TableHead>
                   <TableHead>Date</TableHead>
-                  <TableHead>Time</TableHead>
-                  <TableHead>Duration</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {exams.map((e) => (
-                  <TableRow key={e.name + e.class}>
+                {store.exams.length === 0 && (
+                  <TableRow><TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-10">No exams yet.</TableCell></TableRow>
+                )}
+                {[...store.exams].sort((a, b) => b.date.localeCompare(a.date)).map((e) => (
+                  <TableRow key={e.id}>
                     <TableCell className="font-medium">{e.name}</TableCell>
-                    <TableCell>{e.class}</TableCell>
+                    <TableCell><Badge variant="outline">Term {e.term}</Badge></TableCell>
+                    <TableCell>{e.year}</TableCell>
                     <TableCell>{e.date}</TableCell>
-                    <TableCell>{e.time}</TableCell>
-                    <TableCell>{e.duration}</TableCell>
-                    <TableCell>
-                      <Badge variant={e.status === "Completed" ? "secondary" : "default"}>{e.status}</Badge>
+                    <TableCell className="text-right">
+                      <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete exam (and its marks)?")) deleteExam(e.id); }}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

@@ -1,176 +1,159 @@
+import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Users, BookOpen, MapPin, Edit3, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
+import { PermissionGate } from "@/components/permission-gate";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
-import { createFileRoute } from "@tanstack/react-router";
-import { fetchClasses, createClass, updateClass, deleteClass } from "@/lib/supabase-helpers";
+import { Plus, Edit3, Trash2, Users, Wallet, BookOpen } from "lucide-react";
+import {
+  addClass,
+  deleteClass,
+  formatKES,
+  updateClass,
+  useStore,
+  DEFAULT_SUBJECTS,
+  type ClassRow,
+} from "@/lib/store";
 
 export const Route = createFileRoute("/classes")({
   head: () => ({ meta: [{ title: "Classes — School Management" }] }),
-  component: ClassesPage,
+  component: () => (
+    <PermissionGate path="/classes">
+      <ClassesPage />
+    </PermissionGate>
+  ),
 });
 
-type ClassFormState = {
+type Form = {
   id?: string;
   name: string;
   stream: string;
   teacher: string;
   room: string;
-  fee_amount: string;
+  feePerYear: string;
+  subjects: string;
+};
+
+const blank: Form = {
+  name: "",
+  stream: "",
+  teacher: "",
+  room: "",
+  feePerYear: "0",
+  subjects: DEFAULT_SUBJECTS.join(", "),
 };
 
 function ClassesPage() {
-  const queryClient = useQueryClient();
-  const classesQuery = useQuery({ queryKey: ["classes"], queryFn: fetchClasses });
-  const createMutation = useMutation((input: ClassFormState) => createClass({
-    name: input.name,
-    stream: input.stream,
-    teacher: input.teacher,
-    room: input.room,
-    fee_amount: Number(input.fee_amount) || 0,
-  }), {
-    onSuccess: () => queryClient.invalidateQueries(["classes"]),
-  });
-  const updateMutation = useMutation((payload: ClassFormState) => updateClass(payload.id ?? "", {
-    name: payload.name,
-    stream: payload.stream,
-    teacher: payload.teacher,
-    room: payload.room,
-    fee_amount: Number(payload.fee_amount) || 0,
-  }), {
-    onSuccess: () => queryClient.invalidateQueries(["classes"]),
-  });
-  const deleteMutation = useMutation((id: string) => deleteClass(id), {
-    onSuccess: () => queryClient.invalidateQueries(["classes"]),
-  });
+  const store = useStore();
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState<Form>(blank);
 
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [form, setForm] = useState<ClassFormState>({
-    name: "",
-    stream: "Science",
-    teacher: "",
-    room: "",
-    fee_amount: "0",
-  });
-
-  const openCreate = () => {
-    setForm({ name: "", stream: "Science", teacher: "", room: "", fee_amount: "0" });
-    setIsEditing(false);
-    setDialogOpen(true);
-  };
-
-  const openEdit = (cls: any) => {
+  const openCreate = () => { setForm(blank); setEditing(false); setOpen(true); };
+  const openEdit = (c: ClassRow) => {
     setForm({
-      id: cls.id,
-      name: cls.name,
-      stream: cls.stream,
-      teacher: cls.teacher,
-      room: cls.room,
-      fee_amount: String(cls.fee_amount ?? 0),
+      id: c.id,
+      name: c.name,
+      stream: c.stream ?? "",
+      teacher: c.teacher ?? "",
+      room: c.room ?? "",
+      feePerYear: String(c.feePerYear),
+      subjects: c.subjects.join(", "),
     });
-    setIsEditing(true);
-    setDialogOpen(true);
+    setEditing(true);
+    setOpen(true);
   };
 
-  const save = async () => {
-    if (isEditing) {
-      await updateMutation.mutateAsync(form);
-    } else {
-      await createMutation.mutateAsync(form);
-    }
-    setDialogOpen(false);
+  const save = () => {
+    const subjects = form.subjects.split(",").map((s) => s.trim()).filter(Boolean);
+    const payload = {
+      name: form.name.trim(),
+      stream: form.stream.trim(),
+      teacher: form.teacher.trim(),
+      room: form.room.trim(),
+      feePerYear: Number(form.feePerYear) || 0,
+      subjects,
+    };
+    if (editing && form.id) updateClass(form.id, payload);
+    else addClass(payload);
+    setOpen(false);
   };
 
   return (
     <>
       <PageHeader
-        title="Classes & Sections"
-        description="Manage forms, streams, class teachers and fee structures."
+        title="Classes"
+        description="Each class has its own annual fee — split automatically into 3 terms."
         actions={
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button onClick={openCreate}><Plus className="h-4 w-4" />New Class</Button>
+              <Button onClick={openCreate}><Plus className="h-4 w-4" /> New class</Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>{isEditing ? "Edit Class" : "Add New Class"}</DialogTitle>
-                <DialogDescription>Store class details and class fee settings in Supabase.</DialogDescription>
+                <DialogTitle>{editing ? "Edit class" : "New class"}</DialogTitle>
+                <DialogDescription>Set fee per year — the system divides it into 3 terms.</DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
-                <Input
-                  placeholder="Class name"
-                  value={form.name}
-                  onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-                />
-                <Input
-                  placeholder="Stream"
-                  value={form.stream}
-                  onChange={(event) => setForm((prev) => ({ ...prev, stream: event.target.value }))}
-                />
-                <Input
-                  placeholder="Class teacher"
-                  value={form.teacher}
-                  onChange={(event) => setForm((prev) => ({ ...prev, teacher: event.target.value }))}
-                />
-                <Input
-                  placeholder="Room"
-                  value={form.room}
-                  onChange={(event) => setForm((prev) => ({ ...prev, room: event.target.value }))}
-                />
-                <Input
-                  type="number"
-                  placeholder="Fee amount"
-                  value={form.fee_amount}
-                  onChange={(event) => setForm((prev) => ({ ...prev, fee_amount: event.target.value }))}
-                />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2"><Label>Name</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Form 1A" /></div>
+                  <div className="space-y-2"><Label>Stream</Label><Input value={form.stream} onChange={(e) => setForm({ ...form, stream: e.target.value })} placeholder="Science" /></div>
+                  <div className="space-y-2"><Label>Class teacher</Label><Input value={form.teacher} onChange={(e) => setForm({ ...form, teacher: e.target.value })} /></div>
+                  <div className="space-y-2"><Label>Room</Label><Input value={form.room} onChange={(e) => setForm({ ...form, room: e.target.value })} /></div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Fee per year (KES)</Label>
+                  <Input type="number" value={form.feePerYear} onChange={(e) => setForm({ ...form, feePerYear: e.target.value })} />
+                  <p className="text-xs text-muted-foreground">Per term: {formatKES((Number(form.feePerYear) || 0) / 3)}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Subjects (comma separated)</Label>
+                  <Textarea value={form.subjects} onChange={(e) => setForm({ ...form, subjects: e.target.value })} rows={2} />
+                </div>
               </div>
-              <DialogFooter>
-                <Button type="button" onClick={save}>
-                  {isEditing ? "Update class" : "Create class"}
-                </Button>
-              </DialogFooter>
+              <DialogFooter><Button onClick={save}>{editing ? "Save" : "Create"}</Button></DialogFooter>
             </DialogContent>
           </Dialog>
         }
       />
       <div className="grid gap-4 p-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {classesQuery.data?.map((c) => (
-          <Card key={c.id} className="hover:shadow-md transition-shadow">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <CardTitle className="text-base">{c.name}</CardTitle>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{c.teacher}</p>
+        {store.classes.length === 0 && (
+          <p className="col-span-full text-center text-sm text-muted-foreground py-10">
+            No classes yet — add one to get started.
+          </p>
+        )}
+        {store.classes.map((c) => {
+          const students = store.students.filter((s) => s.classId === c.id).length;
+          return (
+            <Card key={c.id} className="hover:shadow-md transition-shadow">
+              <CardHeader className="pb-2">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle className="text-base">{c.name}</CardTitle>
+                    <p className="text-xs text-muted-foreground">{c.teacher || "No class teacher"}</p>
+                  </div>
+                  {c.stream && <Badge variant="secondary">{c.stream}</Badge>}
                 </div>
-                <Badge variant={c.stream === "Science" ? "default" : "secondary"}>{c.stream}</Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Users className="h-4 w-4" />
-                <span>Fee: {c.fee_amount ? `KES ${c.fee_amount.toLocaleString()}` : "Not set"}</span>
-              </div>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <MapPin className="h-4 w-4" />
-                <span>{c.room || "Unassigned room"}</span>
-              </div>
-            </CardContent>
-            <CardFooter className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" onClick={() => openEdit(c)}>
-                <Edit3 className="h-4 w-4" /> Edit
-              </Button>
-              <Button variant="destructive" size="sm" onClick={() => deleteMutation.mutate(c.id)}>
-                <Trash2 className="h-4 w-4" /> Delete
-              </Button>
-            </CardFooter>
-          </Card>
-        ))}
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <div className="flex items-center gap-2 text-muted-foreground"><Users className="h-4 w-4" />{students} students</div>
+                <div className="flex items-center gap-2 text-muted-foreground"><Wallet className="h-4 w-4" />{formatKES(c.feePerYear)} / yr · {formatKES(c.feePerYear / 3)} / term</div>
+                <div className="flex items-center gap-2 text-muted-foreground"><BookOpen className="h-4 w-4" />{c.subjects.length} subjects</div>
+              </CardContent>
+              <CardFooter className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={() => openEdit(c)}><Edit3 className="h-4 w-4" /> Edit</Button>
+                <Button size="sm" variant="ghost" onClick={() => { if (confirm(`Delete ${c.name}?`)) deleteClass(c.id); }}>
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </CardFooter>
+            </Card>
+          );
+        })}
       </div>
     </>
   );
