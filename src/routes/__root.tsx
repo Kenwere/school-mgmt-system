@@ -4,6 +4,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
@@ -104,39 +105,55 @@ function RootComponent() {
 
 function RootShellContent() {
   const auth = useAuth();
+  const pathname = useRouterState({ select: (r) => r.location.pathname });
+  const isAuthPage = pathname === "/login" || pathname === "/register";
+  const showChrome = !!auth.user && !isAuthPage;
+
+  if (!showChrome) {
+    return (
+      <>
+        <main className="min-h-screen w-full bg-background"><Outlet /></main>
+        <Toaster />
+      </>
+    );
+  }
+
+  const initials = (auth.user?.name || auth.user?.email || "?")
+    .split(/\s+/)
+    .map((s) => s[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
-        {auth.user ? <AppSidebar /> : null}
+        <AppSidebar />
         <div className="flex flex-1 flex-col">
-          {auth.user ? (
-            <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-card px-4">
-              <SidebarTrigger />
-              <div className="relative hidden flex-1 max-w-md md:block">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input placeholder="Search students, staff, classes…" className="pl-9 h-9 bg-muted/50 border-transparent" />
-              </div>
-              <div className="ml-auto flex items-center gap-2">
-                <Button variant="ghost" size="icon" className="relative">
-                  <Bell className="h-4 w-4" />
-                  <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-destructive" />
-                </Button>
-                <div className="hidden sm:flex items-center gap-2 rounded-md px-2 py-1">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-primary text-primary-foreground text-xs">AD</AvatarFallback>
-                  </Avatar>
-                  <div className="hidden text-left text-xs leading-tight sm:block">
-                    <div className="font-medium">{auth.user.email}</div>
-                    <div className="text-muted-foreground">{auth.user.role === "admin" ? "Administrator" : auth.user.role}</div>
-                  </div>
+          <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-card px-4 print:hidden">
+            <SidebarTrigger />
+            <div className="relative hidden flex-1 max-w-md md:block">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input placeholder="Search…" className="pl-9 h-9 bg-muted/50 border-transparent" />
+            </div>
+            <div className="ml-auto flex items-center gap-2">
+              <Button variant="ghost" size="icon" className="relative">
+                <Bell className="h-4 w-4" />
+              </Button>
+              <div className="hidden sm:flex items-center gap-2 rounded-md px-2 py-1">
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="bg-primary text-primary-foreground text-xs">{initials}</AvatarFallback>
+                </Avatar>
+                <div className="hidden text-left text-xs leading-tight sm:block">
+                  <div className="font-medium">{auth.user!.name}</div>
+                  <div className="text-muted-foreground capitalize">{auth.user!.role}</div>
                 </div>
-                <Button variant="outline" size="sm" onClick={auth.signOut}>
-                  Sign out
-                </Button>
               </div>
-            </header>
-          ) : null}
+              <Button variant="outline" size="sm" onClick={auth.signOut}>
+                Sign out
+              </Button>
+            </div>
+          </header>
           <main className="flex-1">
             <Outlet />
           </main>
