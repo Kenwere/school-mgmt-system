@@ -354,13 +354,16 @@ export function feeStatusForStudent(studentId: ID) {
   for (const p of s.payments.filter((p) => p.studentId === studentId)) {
     byTerm[p.term] = (byTerm[p.term] ?? 0) + p.amount;
   }
-  const totals = {
-    yearly,
+  const paidTotal = byTerm[1] + byTerm[2] + byTerm[3];
+  return {
+    student: st,
+    class: cls,
+    byTerm,
     perTerm,
-    paidTotal: byTerm[1] + byTerm[2] + byTerm[3],
-    balanceTotal: yearly - (byTerm[1] + byTerm[2] + byTerm[3]),
+    yearly,
+    paidTotal,
+    balanceTotal: yearly - paidTotal,
   };
-  return { student: st, class: cls, byTerm, perTerm, ...totals };
 }
 
 export const formatKES = (n: number) =>
