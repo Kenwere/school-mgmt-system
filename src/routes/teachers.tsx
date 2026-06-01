@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, Shield } from "lucide-react";
+import { toast } from "sonner";
 import { addTeacher, deleteUser, updateUser, useStore, TEACHER_PERMISSION_OPTIONS } from "@/lib/store";
 import { PermissionGate } from "@/components/permission-gate";
 
