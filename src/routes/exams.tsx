@@ -99,7 +99,7 @@ function ExamsPage() {
                     <TableCell>{e.year}</TableCell>
                     <TableCell>{e.date}</TableCell>
                     <TableCell className="text-right">
-                      <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete exam (and its marks)?")) deleteExam(e.id); }}>
+                      <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete exam (and its marks)?")) { deleteExam(e.id); toast.success(`Exam "${e.name}" deleted`); } }}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </TableCell>
