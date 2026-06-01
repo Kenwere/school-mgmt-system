@@ -106,7 +106,7 @@ function TeachersPage() {
                     <TableCell>{t.email}</TableCell>
                     <TableCell><Badge variant="secondary">{t.permissions.length} / {TEACHER_PERMISSION_OPTIONS.length}</Badge></TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" onClick={() => { if (confirm(`Remove ${t.name}?`)) deleteUser(t.id); }}>
+                      <Button variant="ghost" size="sm" onClick={() => { if (confirm(`Remove ${t.name}?`)) { deleteUser(t.id); toast.success(`Teacher "${t.name}" removed`); } }}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </TableCell>
