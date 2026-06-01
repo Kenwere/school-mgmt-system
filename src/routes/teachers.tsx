@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, Shield } from "lucide-react";
+import { toast } from "sonner";
 import { addTeacher, deleteUser, updateUser, useStore, TEACHER_PERMISSION_OPTIONS } from "@/lib/store";
 import { PermissionGate } from "@/components/permission-gate";
 
@@ -40,6 +41,7 @@ function TeachersPage() {
       return;
     }
     addTeacher({ name, email, password });
+    toast.success(`Teacher "${name}" added`);
     setName(""); setEmail(""); setPassword("");
     setOpen(false);
   };
@@ -51,6 +53,7 @@ function TeachersPage() {
       ? Array.from(new Set([...t.permissions, path]))
       : t.permissions.filter((p) => p !== path);
     updateUser(id, { permissions: perms });
+    toast.success(`Permissions updated for ${t.name}`);
   };
 
   return (
@@ -103,7 +106,7 @@ function TeachersPage() {
                     <TableCell>{t.email}</TableCell>
                     <TableCell><Badge variant="secondary">{t.permissions.length} / {TEACHER_PERMISSION_OPTIONS.length}</Badge></TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" onClick={() => { if (confirm(`Remove ${t.name}?`)) deleteUser(t.id); }}>
+                      <Button variant="ghost" size="sm" onClick={() => { if (confirm(`Remove ${t.name}?`)) { deleteUser(t.id); toast.success(`Teacher "${t.name}" removed`); } }}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </TableCell>

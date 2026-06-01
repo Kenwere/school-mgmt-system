@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { addExam, deleteExam, useStore, type Term } from "@/lib/store";
 
 export const Route = createFileRoute("/exams")({
@@ -33,6 +34,7 @@ function ExamsPage() {
   const save = () => {
     if (!name.trim()) return;
     addExam({ name: name.trim(), term, year, date });
+    toast.success(`Exam "${name.trim()}" added`);
     setName("");
     setOpen(false);
   };
@@ -97,7 +99,7 @@ function ExamsPage() {
                     <TableCell>{e.year}</TableCell>
                     <TableCell>{e.date}</TableCell>
                     <TableCell className="text-right">
-                      <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete exam (and its marks)?")) deleteExam(e.id); }}>
+                      <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete exam (and its marks)?")) { deleteExam(e.id); toast.success(`Exam "${e.name}" deleted`); } }}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </TableCell>

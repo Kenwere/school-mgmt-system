@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/lib/auth";
 import { useStore } from "@/lib/store";
+import { toast } from "sonner";
 import { School, Upload } from "lucide-react";
 
 export const Route = createFileRoute("/register")({
@@ -71,6 +72,7 @@ function RegisterPage() {
         password: adminPassword,
       },
     });
+    toast.success(`Welcome, ${adminName.trim()}! ${schoolName.trim()} is set up.`);
   };
 
   return (

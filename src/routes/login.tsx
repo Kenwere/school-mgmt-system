@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { useStore } from "@/lib/store";
+import { toast } from "sonner";
 import { School } from "lucide-react";
 
 export const Route = createFileRoute("/login")({
@@ -30,7 +31,12 @@ function LoginPage() {
     e.preventDefault();
     setError("");
     const ok = await auth.signIn(email, password);
-    if (!ok) setError("Invalid email or password.");
+    if (!ok) {
+      setError("Invalid email or password.");
+      toast.error("Invalid email or password");
+    } else {
+      toast.success("Signed in");
+    }
   };
 
   return (

@@ -1,5 +1,4 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
-import { useState } from "react";
 import {
   Users,
   GraduationCap,
@@ -10,6 +9,16 @@ import {
   Printer,
   ShieldCheck,
   School,
+  Phone,
+  Mail,
+  Facebook,
+  Twitter,
+  Instagram,
+  Headphones,
+  Home as HomeIcon,
+  MapPin,
+  ChevronRight,
+  CheckCircle2,
 } from "lucide-react";
 import {
   Bar,
@@ -21,6 +30,7 @@ import {
   YAxis,
 } from "recharts";
 
+import heroImage from "@/assets/landing-hero.jpg";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -43,62 +53,160 @@ function Landing() {
   const router = useRouter();
   const store = useStore();
   const hasSchool = !!store.school;
+  const schoolName = store.school?.name ?? "SchoolSuite";
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted">
-      <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-        <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <School className="h-5 w-5" />
+    <div className="min-h-screen bg-background">
+      {/* Top utility bar */}
+      <div className="bg-foreground text-background">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-6 py-2 text-xs">
+          <div className="flex flex-wrap items-center gap-5">
+            <span className="inline-flex items-center gap-1.5 opacity-90">
+              <Phone className="h-3.5 w-3.5" /> +254 700 000 000
+            </span>
+            <span className="hidden items-center gap-1.5 opacity-90 sm:inline-flex">
+              <Mail className="h-3.5 w-3.5" /> hello@schoolsuite.app
+            </span>
+            <span className="hidden items-center gap-3 opacity-80 md:inline-flex">
+              Follow us
+              <Facebook className="h-3.5 w-3.5" />
+              <Twitter className="h-3.5 w-3.5" />
+              <Instagram className="h-3.5 w-3.5" />
+            </span>
           </div>
-          <span className="font-semibold tracking-tight">SchoolSuite</span>
+          <div className="flex items-center gap-4">
+            <Link to="/login" className="opacity-90 hover:opacity-100">
+              Sign in
+            </Link>
+            {!hasSchool && (
+              <Link to="/register" className="opacity-90 hover:opacity-100">
+                Register
+              </Link>
+            )}
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="ghost" onClick={() => router.navigate({ to: "/login" })}>
-            Sign in
-          </Button>
-          {!hasSchool && (
-            <Button onClick={() => router.navigate({ to: "/register" })}>
-              Register your school
+      </div>
+
+      {/* Main nav */}
+      <header className="sticky top-0 z-30 border-b bg-card/95 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+          <Link to="/" className="flex items-center gap-2">
+            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
+              <School className="h-5 w-5" />
+            </div>
+            <span className="text-lg font-semibold tracking-tight">
+              {schoolName}
+              <span className="ml-1 text-primary">.</span>
+            </span>
+          </Link>
+          <nav className="hidden items-center gap-7 text-sm font-medium md:flex">
+            <a href="#home" className="text-foreground hover:text-primary">Home</a>
+            <a href="#features" className="text-muted-foreground hover:text-primary">Features</a>
+            <a href="#modules" className="text-muted-foreground hover:text-primary">Modules</a>
+            <a href="#about" className="text-muted-foreground hover:text-primary">About</a>
+            <a href="#contact" className="text-muted-foreground hover:text-primary">Contact</a>
+          </nav>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" onClick={() => router.navigate({ to: "/login" })}>
+              Sign in
             </Button>
-          )}
+            {!hasSchool && (
+              <Button onClick={() => router.navigate({ to: "/register" })}>
+                Register your school
+              </Button>
+            )}
+          </div>
         </div>
       </header>
 
-      <section className="mx-auto max-w-6xl px-6 pb-20 pt-16">
-        <div className="grid items-center gap-12 md:grid-cols-2">
-          <div>
-            <span className="inline-flex rounded-full border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
-              Modern school management
-            </span>
-            <h1 className="mt-4 text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
-              Run your school from one calm, professional cockpit.
-            </h1>
-            <p className="mt-4 max-w-xl text-base leading-7 text-muted-foreground">
-              Enrol students, manage classes, capture exam marks with automatic ranking,
-              and track termly fee balances — all in a clean, printable workspace built
-              for administrators and teachers.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              {hasSchool ? (
-                <Button size="lg" onClick={() => router.navigate({ to: "/login" })}>
-                  Sign in to {store.school?.name}
+      {/* Hero */}
+      <section id="home" className="relative">
+        <div className="relative h-[560px] w-full overflow-hidden">
+          <img
+            src={heroImage}
+            alt="Students learning together in a bright classroom"
+            width={1920}
+            height={1080}
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-foreground/80 via-foreground/55 to-foreground/30" />
+          <div className="relative mx-auto flex h-full max-w-7xl items-center px-6">
+            <div className="max-w-2xl text-background">
+              <span className="inline-flex rounded-full border border-background/30 bg-background/10 px-3 py-1 text-xs font-medium backdrop-blur">
+                Modern school management
+              </span>
+              <h1 className="mt-5 text-5xl font-semibold leading-tight tracking-tight sm:text-6xl">
+                Learning through <span className="text-primary-foreground/90 underline decoration-primary decoration-4 underline-offset-8">fun</span>
+              </h1>
+              <p className="mt-5 max-w-xl text-base leading-7 text-background/80">
+                Enrol students, manage classes, capture exam marks with automatic ranking,
+                and track termly fee balances — all in one calm, printable workspace built
+                for administrators and teachers.
+              </p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                {hasSchool ? (
+                  <Button size="lg" onClick={() => router.navigate({ to: "/login" })}>
+                    Sign in to {schoolName} <ChevronRight className="h-4 w-4" />
+                  </Button>
+                ) : (
+                  <Button size="lg" onClick={() => router.navigate({ to: "/register" })}>
+                    Apply Now <ChevronRight className="h-4 w-4" />
+                  </Button>
+                )}
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="border-background/40 bg-background/10 text-background hover:bg-background hover:text-foreground"
+                  onClick={() => {
+                    document.getElementById("features")?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                >
+                  Read More
                 </Button>
-              ) : (
-                <Button size="lg" onClick={() => router.navigate({ to: "/register" })}>
-                  Get started — register your school
-                </Button>
-              )}
-              <Button size="lg" variant="outline" onClick={() => router.navigate({ to: "/login" })}>
-                I already have an account
-              </Button>
+              </div>
             </div>
-            <p className="mt-6 text-xs text-muted-foreground">
-              Demo build — data is stored on this device only.
+          </div>
+        </div>
+      </section>
+
+      {/* Quick highlights */}
+      <section id="features" className="border-b bg-card">
+        <div className="mx-auto grid max-w-7xl gap-10 px-6 py-16 sm:grid-cols-3">
+          <Highlight
+            icon={Headphones}
+            title="Fast Support"
+            body="Get in touch any time — we help you set up classes, fees, and exams in minutes."
+          />
+          <Highlight
+            icon={HomeIcon}
+            title="What We Do"
+            body="A complete cockpit for admissions, exams, ranking, fees and printable reports."
+          />
+          <Highlight
+            icon={MapPin}
+            title="Where We Are"
+            body="Cloud-based and accessible from every device in your school — no install required."
+          />
+        </div>
+      </section>
+
+      {/* Modules grid */}
+      <section id="modules" className="bg-muted/40">
+        <div className="mx-auto max-w-7xl px-6 py-20">
+          <div className="mx-auto max-w-2xl text-center">
+            <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+              Everything you need
+            </span>
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
+              Built for administrators and teachers
+            </h2>
+            <p className="mt-3 text-muted-foreground">
+              Powerful modules that work together — from the first admission to the
+              end-of-year report card.
             </p>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             <FeatureCard icon={Users} title="Students & staff" body="Admissions, profiles, transfers and a clean roster." />
             <FeatureCard icon={Award} title="Exams & ranking" body="Record marks per exam — rankings update instantly." />
             <FeatureCard icon={Wallet} title="Termly fees" body="Class fee split across 3 terms with live balances." />
@@ -109,14 +217,76 @@ function Landing() {
         </div>
       </section>
 
-      <footer className="border-t bg-card/50">
-        <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-2 px-6 py-6 sm:flex-row sm:items-center">
-          <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} SchoolSuite. All rights reserved.</p>
-          <div className="flex gap-4 text-sm">
-            <Link to="/login" className="text-muted-foreground hover:text-foreground">Sign in</Link>
-            {!hasSchool && (
-              <Link to="/register" className="text-muted-foreground hover:text-foreground">Register</Link>
-            )}
+      {/* About / CTA strip */}
+      <section id="about" className="bg-foreground text-background">
+        <div className="mx-auto grid max-w-7xl items-center gap-10 px-6 py-16 md:grid-cols-2">
+          <div>
+            <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+              One calm cockpit for the whole school year.
+            </h2>
+            <p className="mt-4 text-background/75">
+              Replace spreadsheets with a focused workspace that keeps students,
+              teachers, marks and fees in one place — and prints beautiful reports
+              when you need them.
+            </p>
+            <ul className="mt-6 space-y-3 text-sm">
+              {[
+                "Set up in minutes — no IT team required",
+                "Three-term fee tracking with live balances",
+                "Auto-ranked grades per class and per exam",
+                "Permission-controlled access for teachers",
+              ].map((t) => (
+                <li key={t} className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 text-primary" /> {t}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <Stat number="20+" label="Modules ready out of the box" />
+            <Stat number="3" label="Terms tracked per academic year" />
+            <Stat number="Auto" label="Ranking by exam and class" />
+            <Stat number="100%" label="Printable, branded reports" />
+          </div>
+        </div>
+      </section>
+
+      {/* Contact / Footer */}
+      <footer id="contact" className="border-t bg-card">
+        <div className="mx-auto grid max-w-7xl gap-8 px-6 py-12 sm:grid-cols-2 md:grid-cols-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
+                <School className="h-5 w-5" />
+              </div>
+              <span className="font-semibold tracking-tight">{schoolName}</span>
+            </div>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Modern school management for forward-thinking schools.
+            </p>
+          </div>
+          <FooterCol title="Product" links={["Features", "Modules", "Reports", "Pricing"]} />
+          <FooterCol title="Company" links={["About", "Contact", "Privacy", "Terms"]} />
+          <div>
+            <h4 className="text-sm font-semibold">Get in touch</h4>
+            <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+              <li className="flex items-center gap-2"><Phone className="h-4 w-4" /> +254 700 000 000</li>
+              <li className="flex items-center gap-2"><Mail className="h-4 w-4" /> hello@schoolsuite.app</li>
+              <li className="flex items-center gap-2"><MapPin className="h-4 w-4" /> Nairobi, Kenya</li>
+            </ul>
+          </div>
+        </div>
+        <div className="border-t">
+          <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-2 px-6 py-5 sm:flex-row sm:items-center">
+            <p className="text-xs text-muted-foreground">
+              © {new Date().getFullYear()} {schoolName}. All rights reserved.
+            </p>
+            <div className="flex gap-4 text-xs">
+              <Link to="/login" className="text-muted-foreground hover:text-foreground">Sign in</Link>
+              {!hasSchool && (
+                <Link to="/register" className="text-muted-foreground hover:text-foreground">Register</Link>
+              )}
+            </div>
           </div>
         </div>
       </footer>
@@ -124,12 +294,24 @@ function Landing() {
   );
 }
 
+function Highlight({ icon: Icon, title, body }: { icon: any; title: string; body: string }) {
+  return (
+    <div className="flex flex-col items-center text-center">
+      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+        <Icon className="h-6 w-6" />
+      </div>
+      <h3 className="mt-4 text-base font-semibold">{title}</h3>
+      <p className="mt-2 max-w-xs text-sm text-muted-foreground">{body}</p>
+    </div>
+  );
+}
+
 function FeatureCard({ icon: Icon, title, body }: { icon: any; title: string; body: string }) {
   return (
-    <Card className="border-muted/60">
+    <Card className="border-muted/60 transition-shadow hover:shadow-md">
       <CardHeader className="pb-2">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary">
+          <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary">
             <Icon className="h-4 w-4" />
           </div>
           <CardTitle className="text-sm font-semibold">{title}</CardTitle>
@@ -139,6 +321,28 @@ function FeatureCard({ icon: Icon, title, body }: { icon: any; title: string; bo
         <CardDescription className="text-sm">{body}</CardDescription>
       </CardContent>
     </Card>
+  );
+}
+
+function Stat({ number, label }: { number: string; label: string }) {
+  return (
+    <div className="rounded-lg border border-background/15 bg-background/5 p-5">
+      <div className="text-3xl font-semibold text-primary">{number}</div>
+      <div className="mt-1 text-sm text-background/70">{label}</div>
+    </div>
+  );
+}
+
+function FooterCol({ title, links }: { title: string; links: string[] }) {
+  return (
+    <div>
+      <h4 className="text-sm font-semibold">{title}</h4>
+      <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+        {links.map((l) => (
+          <li key={l}><a href="#" className="hover:text-foreground">{l}</a></li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, Wallet } from "lucide-react";
+import { toast } from "sonner";
 import { addPayment, deletePayment, feeStatusForStudent, formatKES, useStore, type Term } from "@/lib/store";
 
 export const Route = createFileRoute("/fees")({
@@ -46,14 +47,17 @@ function FeesPage() {
 
   const save = () => {
     if (!studentId || !amount) return;
+    const amt = Number(amount) || 0;
     addPayment({
       studentId,
       term,
-      amount: Number(amount) || 0,
+      amount: amt,
       method,
       ref: ref.trim() || undefined,
       date,
     });
+    const st = store.students.find((x) => x.id === studentId);
+    toast.success(`Recorded ${formatKES(amt)} for ${st?.name ?? "student"} (Term ${term})`);
     setOpen(false);
   };
 
@@ -173,7 +177,7 @@ function FeesPage() {
                       <TableCell>{p.method}</TableCell>
                       <TableCell className="font-mono text-xs">{p.ref ?? "—"}</TableCell>
                       <TableCell className="text-right">
-                        <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete this payment?")) deletePayment(p.id); }}>
+                        <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete this payment?")) { deletePayment(p.id); toast.success("Payment deleted"); } }}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </TableCell>
