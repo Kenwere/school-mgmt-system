@@ -53,6 +53,7 @@ function TeachersPage() {
       ? Array.from(new Set([...t.permissions, path]))
       : t.permissions.filter((p) => p !== path);
     updateUser(id, { permissions: perms });
+    toast.success(`Permissions updated for ${t.name}`);
   };
 
   return (
