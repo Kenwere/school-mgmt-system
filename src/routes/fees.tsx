@@ -177,7 +177,7 @@ function FeesPage() {
                       <TableCell>{p.method}</TableCell>
                       <TableCell className="font-mono text-xs">{p.ref ?? "—"}</TableCell>
                       <TableCell className="text-right">
-                        <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete this payment?")) deletePayment(p.id); }}>
+                        <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete this payment?")) { deletePayment(p.id); toast.success("Payment deleted"); } }}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </TableCell>
