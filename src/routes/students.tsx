@@ -173,7 +173,7 @@ function StudentsPage() {
                       <TableCell>{s.phone}</TableCell>
                       <TableCell className="text-right">
                         <Button size="icon" variant="ghost" onClick={() => openEdit(s)}><Edit3 className="h-4 w-4" /></Button>
-                        <Button size="icon" variant="ghost" onClick={() => { if (confirm(`Delete ${s.name}?`)) deleteStudent(s.id); }}>
+                        <Button size="icon" variant="ghost" onClick={() => { if (confirm(`Delete ${s.name}?`)) { deleteStudent(s.id); toast.success(`Student "${s.name}" deleted`); } }}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </TableCell>
