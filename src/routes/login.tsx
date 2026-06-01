@@ -31,7 +31,12 @@ function LoginPage() {
     e.preventDefault();
     setError("");
     const ok = await auth.signIn(email, password);
-    if (!ok) setError("Invalid email or password.");
+    if (!ok) {
+      setError("Invalid email or password.");
+      toast.error("Invalid email or password");
+    } else {
+      toast.success("Signed in");
+    }
   };
 
   return (
