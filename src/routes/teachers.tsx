@@ -41,6 +41,7 @@ function TeachersPage() {
       return;
     }
     addTeacher({ name, email, password });
+    toast.success(`Teacher "${name}" added`);
     setName(""); setEmail(""); setPassword("");
     setOpen(false);
   };
