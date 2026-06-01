@@ -69,8 +69,13 @@ function StudentsPage() {
       phone: form.phone.trim(),
       email: form.email.trim() || undefined,
     };
-    if (editing && form.id) updateStudent(form.id, payload);
-    else addStudent(payload);
+    if (editing && form.id) {
+      updateStudent(form.id, payload);
+      toast.success(`Student "${payload.name}" updated`);
+    } else {
+      addStudent(payload);
+      toast.success(`Student "${payload.name}" added`);
+    }
     setOpen(false);
   };
 
