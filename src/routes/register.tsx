@@ -72,6 +72,7 @@ function RegisterPage() {
         password: adminPassword,
       },
     });
+    toast.success(`Welcome, ${adminName.trim()}! ${schoolName.trim()} is set up.`);
   };
 
   return (
