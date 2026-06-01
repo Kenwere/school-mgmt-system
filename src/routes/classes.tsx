@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, Edit3, Trash2, Users, Wallet, BookOpen } from "lucide-react";
+import { toast } from "sonner";
 import {
   addClass,
   deleteClass,
