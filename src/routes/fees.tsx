@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, Wallet } from "lucide-react";
+import { toast } from "sonner";
 import { addPayment, deletePayment, feeStatusForStudent, formatKES, useStore, type Term } from "@/lib/store";
 
 export const Route = createFileRoute("/fees")({
