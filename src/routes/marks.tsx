@@ -39,6 +39,7 @@ function MarksPage() {
     const n = Math.max(0, Math.min(100, Number(raw) || 0));
     if (raw === "") return;
     setMark({ examId, studentId, subject, score: n });
+    toast.success(`Saved ${subject}: ${n}`);
   };
 
   return (
