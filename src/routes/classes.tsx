@@ -80,8 +80,13 @@ function ClassesPage() {
       feePerYear: Number(form.feePerYear) || 0,
       subjects,
     };
-    if (editing && form.id) updateClass(form.id, payload);
-    else addClass(payload);
+    if (editing && form.id) {
+      updateClass(form.id, payload);
+      toast.success(`Class "${payload.name}" updated`);
+    } else {
+      addClass(payload);
+      toast.success(`Class "${payload.name}" created`);
+    }
     setOpen(false);
   };
 
