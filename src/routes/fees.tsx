@@ -47,14 +47,17 @@ function FeesPage() {
 
   const save = () => {
     if (!studentId || !amount) return;
+    const amt = Number(amount) || 0;
     addPayment({
       studentId,
       term,
-      amount: Number(amount) || 0,
+      amount: amt,
       method,
       ref: ref.trim() || undefined,
       date,
     });
+    const st = store.students.find((x) => x.id === studentId);
+    toast.success(`Recorded ${formatKES(amt)} for ${st?.name ?? "student"} (Term ${term})`);
     setOpen(false);
   };
 
