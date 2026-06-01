@@ -34,6 +34,7 @@ function ExamsPage() {
   const save = () => {
     if (!name.trim()) return;
     addExam({ name: name.trim(), term, year, date });
+    toast.success(`Exam "${name.trim()}" added`);
     setName("");
     setOpen(false);
   };
