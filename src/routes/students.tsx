@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Edit3, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { addStudent, deleteStudent, updateStudent, useStore, type Student } from "@/lib/store";
 
 export const Route = createFileRoute("/students")({
