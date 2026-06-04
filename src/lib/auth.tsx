@@ -3,6 +3,7 @@ import { useRouter } from "@tanstack/react-router";
 import {
   currentUser,
   hasPermission,
+  initializeStoreFromSupabase,
   login as storeLogin,
   logout as storeLogout,
   registerSchool as storeRegister,
@@ -28,6 +29,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const store = useStore();
   const user = store.users.find((u) => u.id === store.currentUserId) ?? null;
+
+  React.useEffect(() => {
+    void initializeStoreFromSupabase();
+  }, []);
 
   const signIn = React.useCallback(
     async (email: string, password: string) => {

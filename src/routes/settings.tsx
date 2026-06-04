@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
+import { updateSchool, useStore } from "@/lib/store";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({ meta: [{ title: "Settings — Northfield Academy" }] }),
@@ -12,6 +14,25 @@ export const Route = createFileRoute("/settings")({
 });
 
 function SettingsPage() {
+  const store = useStore();
+  const [name, setName] = useState(store.school?.name ?? "");
+  const [motto, setMotto] = useState(store.school?.motto ?? "");
+  const [email, setEmail] = useState(store.school?.email ?? "");
+
+  useEffect(() => {
+    setName(store.school?.name ?? "");
+    setMotto(store.school?.motto ?? "");
+    setEmail(store.school?.email ?? "");
+  }, [store.school]);
+
+  const saveSchool = () => {
+    updateSchool({
+      name: name.trim(),
+      motto: motto.trim(),
+      email: email.trim(),
+    });
+  };
+
   return (
     <>
       <PageHeader title="Settings" description="School profile, integrations and preferences." />
@@ -24,17 +45,17 @@ function SettingsPage() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">School Name</Label>
-              <Input id="name" defaultValue="Northfield Academy" />
+              <Input id="name" value={name} onChange={(event) => setName(event.target.value)} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="motto">Motto</Label>
-              <Input id="motto" defaultValue="Knowledge · Integrity · Service" />
+              <Input id="motto" value={motto} onChange={(event) => setMotto(event.target.value)} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Official Email</Label>
-              <Input id="email" type="email" defaultValue="info@northfield.ac.ke" />
+              <Input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
             </div>
-            <Button>Save Changes</Button>
+            <Button onClick={saveSchool}>Save Changes</Button>
           </CardContent>
         </Card>
 

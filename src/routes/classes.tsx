@@ -10,7 +10,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, Edit3, Trash2, Users, Wallet, BookOpen } from "lucide-react";
-import { toast } from "sonner";
 import {
   addClass,
   deleteClass,
@@ -82,10 +81,8 @@ function ClassesPage() {
     };
     if (editing && form.id) {
       updateClass(form.id, payload);
-      toast.success(`Class "${payload.name}" updated`);
     } else {
       addClass(payload);
-      toast.success(`Class "${payload.name}" created`);
     }
     setOpen(false);
   };
@@ -153,7 +150,7 @@ function ClassesPage() {
               </CardContent>
               <CardFooter className="flex gap-2">
                 <Button size="sm" variant="outline" onClick={() => openEdit(c)}><Edit3 className="h-4 w-4" /> Edit</Button>
-                <Button size="sm" variant="ghost" onClick={() => { if (confirm(`Delete ${c.name}?`)) { deleteClass(c.id); toast.success(`Class "${c.name}" deleted`); } }}>
+                <Button size="sm" variant="ghost" onClick={() => { if (confirm(`Delete ${c.name}?`)) deleteClass(c.id); }}>
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
               </CardFooter>

@@ -10,9 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, Wallet } from "lucide-react";
-import { toast } from "sonner";
-import { addPayment, deletePayment, feeStatusForStudent, formatKES, useStore, type Term } from "@/lib/store";
+import { Edit3, Plus, Trash2, Wallet } from "lucide-react";
+import { addPayment, deletePayment, feeStatusForStudent, formatKES, updatePayment, useStore, type Payment, type Term } from "@/lib/store";
 
 export const Route = createFileRoute("/fees")({
   head: () => ({ meta: [{ title: "Fees — School Management" }] }),
@@ -27,6 +26,7 @@ function FeesPage() {
   const store = useStore();
   const [classFilter, setClassFilter] = useState<string>("all");
   const [open, setOpen] = useState(false);
+  const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
   const [studentId, setStudentId] = useState("");
   const [term, setTerm] = useState<Term>(1);
   const [amount, setAmount] = useState("");
@@ -37,6 +37,7 @@ function FeesPage() {
   const students = store.students.filter((s) => classFilter === "all" || s.classId === classFilter);
 
   const openFor = (sid: string) => {
+    setEditingPaymentId(null);
     setStudentId(sid);
     setAmount("");
     setRef("");
@@ -45,19 +46,34 @@ function FeesPage() {
     setOpen(true);
   };
 
+  const openEditPayment = (payment: Payment) => {
+    setEditingPaymentId(payment.id);
+    setStudentId(payment.studentId);
+    setTerm(payment.term);
+    setAmount(String(payment.amount));
+    setMethod(payment.method);
+    setRef(payment.ref ?? "");
+    setDate(payment.date);
+    setOpen(true);
+  };
+
   const save = () => {
     if (!studentId || !amount) return;
     const amt = Number(amount) || 0;
-    addPayment({
+    const payload = {
       studentId,
       term,
       amount: amt,
       method,
       ref: ref.trim() || undefined,
       date,
-    });
-    const st = store.students.find((x) => x.id === studentId);
-    toast.success(`Recorded ${formatKES(amt)} for ${st?.name ?? "student"} (Term ${term})`);
+    };
+    if (editingPaymentId) {
+      updatePayment(editingPaymentId, payload);
+    } else {
+      addPayment(payload);
+    }
+    setEditingPaymentId(null);
     setOpen(false);
   };
 
@@ -103,6 +119,7 @@ function FeesPage() {
                 <TableRow>
                   <TableHead>Student</TableHead>
                   <TableHead>Class</TableHead>
+                  <TableHead className="text-right">Annual fee</TableHead>
                   <TableHead className="text-right">Per term</TableHead>
                   <TableHead className="text-right">T1 paid</TableHead>
                   <TableHead className="text-right">T2 paid</TableHead>
@@ -113,7 +130,7 @@ function FeesPage() {
               </TableHeader>
               <TableBody>
                 {students.length === 0 && (
-                  <TableRow><TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-10">No students.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={9} className="text-center text-sm text-muted-foreground py-10">No students.</TableCell></TableRow>
                 )}
                 {students.map((st) => {
                   const f = feeStatusForStudent(st.id);
@@ -123,6 +140,7 @@ function FeesPage() {
                     <TableRow key={st.id}>
                       <TableCell className="font-medium">{st.name}<div className="text-xs text-muted-foreground">{st.admissionNo}</div></TableCell>
                       <TableCell>{f.class?.name ?? "—"}</TableCell>
+                      <TableCell className="text-right tabular-nums">{formatKES(f.yearly)}</TableCell>
                       <TableCell className="text-right tabular-nums">{formatKES(f.perTerm)}</TableCell>
                       <TableCell className="text-right tabular-nums">{formatKES(f.byTerm[1])}</TableCell>
                       <TableCell className="text-right tabular-nums">{formatKES(f.byTerm[2])}</TableCell>
@@ -177,7 +195,10 @@ function FeesPage() {
                       <TableCell>{p.method}</TableCell>
                       <TableCell className="font-mono text-xs">{p.ref ?? "—"}</TableCell>
                       <TableCell className="text-right">
-                        <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete this payment?")) { deletePayment(p.id); toast.success("Payment deleted"); } }}>
+                        <Button size="icon" variant="ghost" onClick={() => openEditPayment(p)}>
+                          <Edit3 className="h-4 w-4" />
+                        </Button>
+                        <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete this payment?")) deletePayment(p.id); }}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </TableCell>
@@ -193,7 +214,7 @@ function FeesPage() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Record payment</DialogTitle>
+            <DialogTitle>{editingPaymentId ? "Edit payment" : "Record payment"}</DialogTitle>
             <DialogDescription>{store.students.find((x) => x.id === studentId)?.name}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4 sm:grid-cols-2">
@@ -224,7 +245,7 @@ function FeesPage() {
             <div className="space-y-2"><Label>Date</Label><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
             <div className="space-y-2 sm:col-span-2"><Label>Reference (optional)</Label><Input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="e.g. MPESA QHJ123ABC" /></div>
           </div>
-          <DialogFooter><Button onClick={save}>Save payment</Button></DialogFooter>
+          <DialogFooter><Button onClick={save}>{editingPaymentId ? "Save payment" : "Record payment"}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </>

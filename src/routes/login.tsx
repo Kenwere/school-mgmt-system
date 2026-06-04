@@ -1,5 +1,5 @@
 import { createFileRoute, useRouter, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,10 +22,13 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  if (auth.user) {
-    router.navigate({ to: "/" });
-    return null;
-  }
+  useEffect(() => {
+    if (auth.user) {
+      void router.navigate({ to: "/" });
+    }
+  }, [auth.user, router]);
+
+  if (auth.user) return null;
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -10,7 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Edit3, Trash2 } from "lucide-react";
-import { toast } from "sonner";
 import { addStudent, deleteStudent, updateStudent, useStore, type Student } from "@/lib/store";
 
 export const Route = createFileRoute("/students")({
@@ -28,11 +27,12 @@ type Form = {
   admissionNo: string;
   gender: string;
   classId: string;
+  feePerYear: string;
   parent: string;
   phone: string;
   email: string;
 };
-const blank: Form = { name: "", admissionNo: "", gender: "Male", classId: "", parent: "", phone: "", email: "" };
+const blank: Form = { name: "", admissionNo: "", gender: "Male", classId: "", feePerYear: "", parent: "", phone: "", email: "" };
 
 function StudentsPage() {
   const store = useStore();
@@ -54,7 +54,7 @@ function StudentsPage() {
     setOpen(true);
   };
   const openEdit = (s: Student) => {
-    setForm({ ...s, email: s.email ?? "" });
+    setForm({ ...s, feePerYear: s.feePerYear ? String(s.feePerYear) : "", email: s.email ?? "" });
     setEditing(true);
     setOpen(true);
   };
@@ -65,16 +65,15 @@ function StudentsPage() {
       admissionNo: form.admissionNo.trim(),
       gender: form.gender,
       classId: form.classId,
+      feePerYear: form.feePerYear ? Number(form.feePerYear) || 0 : undefined,
       parent: form.parent.trim(),
       phone: form.phone.trim(),
       email: form.email.trim() || undefined,
     };
     if (editing && form.id) {
       updateStudent(form.id, payload);
-      toast.success(`Student "${payload.name}" updated`);
     } else {
       addStudent(payload);
-      toast.success(`Student "${payload.name}" added`);
     }
     setOpen(false);
   };
@@ -132,6 +131,15 @@ function StudentsPage() {
                       </SelectContent>
                     </Select>
                   </div>
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label>Annual fee override (KES)</Label>
+                    <Input
+                      type="number"
+                      value={form.feePerYear}
+                      onChange={(e) => setForm({ ...form, feePerYear: e.target.value })}
+                      placeholder="Leave blank to use class fee"
+                    />
+                  </div>
                   <div className="space-y-2"><Label>Parent / Guardian</Label><Input value={form.parent} onChange={(e) => setForm({ ...form, parent: e.target.value })} /></div>
                   <div className="space-y-2"><Label>Phone</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
                   <div className="space-y-2 sm:col-span-2"><Label>Email (optional)</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
@@ -151,6 +159,7 @@ function StudentsPage() {
                   <TableHead>Adm. No</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Class</TableHead>
+                  <TableHead className="text-right">Annual fee</TableHead>
                   <TableHead>Gender</TableHead>
                   <TableHead>Parent</TableHead>
                   <TableHead>Phone</TableHead>
@@ -159,7 +168,7 @@ function StudentsPage() {
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 && (
-                  <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-10">No students yet.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-10">No students yet.</TableCell></TableRow>
                 )}
                 {filtered.map((s) => {
                   const cls = store.classes.find((c) => c.id === s.classId);
@@ -168,12 +177,15 @@ function StudentsPage() {
                       <TableCell className="font-mono text-xs">{s.admissionNo}</TableCell>
                       <TableCell className="font-medium">{s.name}</TableCell>
                       <TableCell>{cls?.name ?? "—"}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {(s.feePerYear ?? cls?.feePerYear ?? 0).toLocaleString()}
+                      </TableCell>
                       <TableCell>{s.gender}</TableCell>
                       <TableCell>{s.parent}</TableCell>
                       <TableCell>{s.phone}</TableCell>
                       <TableCell className="text-right">
                         <Button size="icon" variant="ghost" onClick={() => openEdit(s)}><Edit3 className="h-4 w-4" /></Button>
-                        <Button size="icon" variant="ghost" onClick={() => { if (confirm(`Delete ${s.name}?`)) { deleteStudent(s.id); toast.success(`Student "${s.name}" deleted`); } }}>
+                        <Button size="icon" variant="ghost" onClick={() => { if (confirm(`Delete ${s.name}?`)) deleteStudent(s.id); }}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </TableCell>

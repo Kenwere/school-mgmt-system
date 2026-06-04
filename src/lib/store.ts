@@ -1,4 +1,6 @@
 import { useSyncExternalStore } from "react";
+import { toast } from "sonner";
+import { isSupabaseConfigured, supabase } from "@/integrations/supabase/client";
 
 export type ID = string;
 export type Term = 1 | 2 | 3;
@@ -37,6 +39,7 @@ export type Student = {
   name: string;
   gender: string;
   classId: ID;
+  feePerYear?: number;
   parent: string;
   phone: string;
   email?: string;
@@ -116,6 +119,8 @@ const DEFAULT_TEACHER_PERMISSIONS = [
 ];
 
 const KEY = "sms-store-v1";
+const SUPABASE_STATE_TABLE = "app_state";
+const SUPABASE_STATE_ROW_ID = "default";
 
 const emptyState: State = {
   school: null,
@@ -141,17 +146,71 @@ function load(): State {
 
 let state: State = load();
 const listeners = new Set<() => void>();
+let hasWarnedAboutSupabase = false;
+let hydratePromise: Promise<void> | null = null;
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
 
-function persist() {
-  if (typeof window !== "undefined") {
-    window.localStorage.setItem(KEY, JSON.stringify(state));
-  }
+function notify() {
   listeners.forEach((l) => l());
 }
 
-function set(updater: (s: State) => State) {
+function isEmptyStateSnapshot(snapshot: State) {
+  return (
+    !snapshot.school &&
+    snapshot.users.length === 0 &&
+    snapshot.classes.length === 0 &&
+    snapshot.students.length === 0 &&
+    snapshot.exams.length === 0 &&
+    snapshot.marks.length === 0 &&
+    snapshot.payments.length === 0
+  );
+}
+
+function persistLocal() {
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(KEY, JSON.stringify(state));
+  }
+}
+
+async function saveRemote(snapshot: State) {
+  if (!supabase) {
+    if (!hasWarnedAboutSupabase && typeof window !== "undefined" && !isSupabaseConfigured) {
+      hasWarnedAboutSupabase = true;
+      console.warn("Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.");
+    }
+    return;
+  }
+
+  const { error } = await supabase.from(SUPABASE_STATE_TABLE).upsert({
+    id: SUPABASE_STATE_ROW_ID,
+    data: snapshot,
+    updated_at: new Date().toISOString(),
+  });
+
+  if (error) {
+    toast.error(`Supabase sync failed: ${error.message}`);
+  }
+}
+
+function queueRemoteSave() {
+  if (typeof window === "undefined") return;
+  if (saveTimer) window.clearTimeout(saveTimer);
+  const snapshot = state;
+  saveTimer = window.setTimeout(() => {
+    void saveRemote(snapshot);
+  }, 300);
+}
+
+function persist() {
+  persistLocal();
+  notify();
+  queueRemoteSave();
+}
+
+function set(updater: (s: State) => State, message?: string) {
   state = updater(state);
   persist();
+  if (message) toast.success(message);
 }
 
 function subscribe(cb: () => void) {
@@ -164,6 +223,43 @@ function getSnapshot() {
 
 export function useStore() {
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+}
+
+export function initializeStoreFromSupabase() {
+  if (hydratePromise) return hydratePromise;
+
+  hydratePromise = (async () => {
+    if (!supabase) return;
+
+    const { data, error } = await supabase
+      .from(SUPABASE_STATE_TABLE)
+      .select("data")
+      .eq("id", SUPABASE_STATE_ROW_ID)
+      .maybeSingle();
+
+    if (error) {
+      toast.error(`Could not load Supabase data: ${error.message}`);
+      return;
+    }
+
+    if (data?.data) {
+      const remoteState = { ...emptyState, ...(data.data as State) };
+      if (isEmptyStateSnapshot(remoteState) && !isEmptyStateSnapshot(state)) {
+        await saveRemote(state);
+        return;
+      }
+      state = remoteState;
+      persistLocal();
+      notify();
+      return;
+    }
+
+    if (!isEmptyStateSnapshot(state)) {
+      await saveRemote(state);
+    }
+  })();
+
+  return hydratePromise;
 }
 
 export const uid = () =>
@@ -189,7 +285,7 @@ export function registerSchool(input: {
     school: input.school,
     users: [adminUser],
     currentUserId: adminUser.id,
-  }));
+  }), `${input.school.name} is set up`);
   return adminUser;
 }
 
@@ -225,62 +321,69 @@ export function addTeacher(input: { name: string; email: string; password: strin
     role: "teacher",
     permissions: [...DEFAULT_TEACHER_PERMISSIONS],
   };
-  set((s) => ({ ...s, users: [...s.users, t] }));
+  set((s) => ({ ...s, users: [...s.users, t] }), `Teacher "${t.name}" created`);
   return t;
 }
 export function updateUser(id: ID, patch: Partial<User>) {
-  set((s) => ({ ...s, users: s.users.map((u) => (u.id === id ? { ...u, ...patch } : u)) }));
+  set(
+    (s) => ({ ...s, users: s.users.map((u) => (u.id === id ? { ...u, ...patch } : u)) }),
+    "User updated",
+  );
 }
 export function deleteUser(id: ID) {
-  set((s) => ({ ...s, users: s.users.filter((u) => u.id !== id) }));
+  const user = state.users.find((u) => u.id === id);
+  set((s) => ({ ...s, users: s.users.filter((u) => u.id !== id) }), `Teacher "${user?.name ?? "user"}" deleted`);
 }
 
 // --- Classes ---
 export function addClass(c: Omit<ClassRow, "id">) {
-  set((s) => ({ ...s, classes: [...s.classes, { ...c, id: uid() }] }));
+  set((s) => ({ ...s, classes: [...s.classes, { ...c, id: uid() }] }), `Class "${c.name}" created`);
 }
 export function updateClass(id: ID, patch: Partial<ClassRow>) {
   set((s) => ({
     ...s,
     classes: s.classes.map((c) => (c.id === id ? { ...c, ...patch } : c)),
-  }));
+  }), `Class "${patch.name ?? "record"}" updated`);
 }
 export function deleteClass(id: ID) {
-  set((s) => ({ ...s, classes: s.classes.filter((c) => c.id !== id) }));
+  const item = state.classes.find((c) => c.id === id);
+  set((s) => ({ ...s, classes: s.classes.filter((c) => c.id !== id) }), `Class "${item?.name ?? "record"}" deleted`);
 }
 
 // --- Students ---
 export function addStudent(st: Omit<Student, "id">) {
-  set((s) => ({ ...s, students: [...s.students, { ...st, id: uid() }] }));
+  set((s) => ({ ...s, students: [...s.students, { ...st, id: uid() }] }), `Student "${st.name}" created`);
 }
 export function updateStudent(id: ID, patch: Partial<Student>) {
   set((s) => ({
     ...s,
     students: s.students.map((x) => (x.id === id ? { ...x, ...patch } : x)),
-  }));
+  }), `Student "${patch.name ?? "record"}" updated`);
 }
 export function deleteStudent(id: ID) {
+  const item = state.students.find((x) => x.id === id);
   set((s) => ({
     ...s,
     students: s.students.filter((x) => x.id !== id),
     marks: s.marks.filter((m) => m.studentId !== id),
     payments: s.payments.filter((p) => p.studentId !== id),
-  }));
+  }), `Student "${item?.name ?? "record"}" deleted`);
 }
 
 // --- Exams ---
 export function addExam(e: Omit<Exam, "id">) {
-  set((s) => ({ ...s, exams: [...s.exams, { ...e, id: uid() }] }));
+  set((s) => ({ ...s, exams: [...s.exams, { ...e, id: uid() }] }), `Exam "${e.name}" created`);
 }
 export function updateExam(id: ID, patch: Partial<Exam>) {
-  set((s) => ({ ...s, exams: s.exams.map((e) => (e.id === id ? { ...e, ...patch } : e)) }));
+  set((s) => ({ ...s, exams: s.exams.map((e) => (e.id === id ? { ...e, ...patch } : e)) }), "Exam updated");
 }
 export function deleteExam(id: ID) {
+  const item = state.exams.find((e) => e.id === id);
   set((s) => ({
     ...s,
     exams: s.exams.filter((e) => e.id !== id),
     marks: s.marks.filter((m) => m.examId !== id),
-  }));
+  }), `Exam "${item?.name ?? "record"}" deleted`);
 }
 
 // --- Marks ---
@@ -296,29 +399,29 @@ export function setMark(input: { examId: ID; studentId: ID; subject: string; sco
     if (idx === -1) next.push({ ...input, id: uid() });
     else next[idx] = { ...next[idx], score: input.score };
     return { ...s, marks: next };
-  });
+  }, `Saved ${input.subject}: ${input.score}`);
 }
 export function deleteMark(id: ID) {
-  set((s) => ({ ...s, marks: s.marks.filter((m) => m.id !== id) }));
+  set((s) => ({ ...s, marks: s.marks.filter((m) => m.id !== id) }), "Mark deleted");
 }
 
 // --- Payments ---
 export function addPayment(p: Omit<Payment, "id">) {
-  set((s) => ({ ...s, payments: [...s.payments, { ...p, id: uid() }] }));
+  set((s) => ({ ...s, payments: [...s.payments, { ...p, id: uid() }] }), `Payment of ${formatKES(p.amount)} recorded`);
 }
 export function updatePayment(id: ID, patch: Partial<Payment>) {
   set((s) => ({
     ...s,
     payments: s.payments.map((p) => (p.id === id ? { ...p, ...patch } : p)),
-  }));
+  }), "Payment updated");
 }
 export function deletePayment(id: ID) {
-  set((s) => ({ ...s, payments: s.payments.filter((p) => p.id !== id) }));
+  set((s) => ({ ...s, payments: s.payments.filter((p) => p.id !== id) }), "Payment deleted");
 }
 
 // --- School profile ---
 export function updateSchool(patch: Partial<School>) {
-  set((s) => ({ ...s, school: s.school ? { ...s.school, ...patch } : s.school }));
+  set((s) => ({ ...s, school: s.school ? { ...s.school, ...patch } : s.school }), "School profile updated");
 }
 
 // --- Derivations ---
@@ -348,7 +451,7 @@ export function feeStatusForStudent(studentId: ID) {
   const st = s.students.find((x) => x.id === studentId);
   if (!st) return null;
   const cls = s.classes.find((c) => c.id === st.classId);
-  const yearly = cls?.feePerYear ?? 0;
+  const yearly = st.feePerYear ?? cls?.feePerYear ?? 0;
   const perTerm = yearly / 3;
   const byTerm: Record<Term, number> = { 1: 0, 2: 0, 3: 0 };
   for (const p of s.payments.filter((p) => p.studentId === studentId)) {

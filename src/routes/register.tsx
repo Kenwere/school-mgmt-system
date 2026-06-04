@@ -1,5 +1,5 @@
 import { createFileRoute, useRouter, Link } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/lib/auth";
 import { useStore } from "@/lib/store";
-import { toast } from "sonner";
 import { School, Upload } from "lucide-react";
 
 export const Route = createFileRoute("/register")({
@@ -19,12 +18,6 @@ function RegisterPage() {
   const auth = useAuth();
   const router = useRouter();
   const store = useStore();
-
-  // If a school is already registered, send users to login
-  if (store.school) {
-    router.navigate({ to: "/login" });
-    return null;
-  }
 
   const fileRef = useRef<HTMLInputElement>(null);
   const [logo, setLogo] = useState<string>("");
@@ -40,6 +33,14 @@ function RegisterPage() {
   const [adminPassword2, setAdminPassword2] = useState("");
 
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (store.school && !auth.user) {
+      void router.navigate({ to: "/login" });
+    }
+  }, [auth.user, router, store.school]);
+
+  if (store.school) return null;
 
   const onLogo = (f: File | null) => {
     if (!f) return;
@@ -72,7 +73,6 @@ function RegisterPage() {
         password: adminPassword,
       },
     });
-    toast.success(`Welcome, ${adminName.trim()}! ${schoolName.trim()} is set up.`);
   };
 
   return (

@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { toast } from "sonner";
 import { setMark, useStore } from "@/lib/store";
 
 export const Route = createFileRoute("/marks")({
@@ -39,7 +38,6 @@ function MarksPage() {
     const n = Math.max(0, Math.min(100, Number(raw) || 0));
     if (raw === "") return;
     setMark({ examId, studentId, subject, score: n });
-    toast.success(`Saved ${subject}: ${n}`);
   };
 
   return (

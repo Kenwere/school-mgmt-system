@@ -10,9 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2 } from "lucide-react";
-import { toast } from "sonner";
-import { addExam, deleteExam, useStore, type Term } from "@/lib/store";
+import { Edit3, Plus, Trash2 } from "lucide-react";
+import { addExam, deleteExam, updateExam, useStore, type Exam, type Term } from "@/lib/store";
 
 export const Route = createFileRoute("/exams")({
   head: () => ({ meta: [{ title: "Exams — School Management" }] }),
@@ -26,16 +25,40 @@ export const Route = createFileRoute("/exams")({
 function ExamsPage() {
   const store = useStore();
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [term, setTerm] = useState<Term>(1);
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [date, setDate] = useState<string>(new Date().toISOString().slice(0, 10));
 
+  const openCreate = () => {
+    setEditingId(null);
+    setName("");
+    setTerm(1);
+    setYear(new Date().getFullYear());
+    setDate(new Date().toISOString().slice(0, 10));
+    setOpen(true);
+  };
+
+  const openEdit = (exam: Exam) => {
+    setEditingId(exam.id);
+    setName(exam.name);
+    setTerm(exam.term);
+    setYear(exam.year);
+    setDate(exam.date);
+    setOpen(true);
+  };
+
   const save = () => {
     if (!name.trim()) return;
-    addExam({ name: name.trim(), term, year, date });
-    toast.success(`Exam "${name.trim()}" added`);
+    const payload = { name: name.trim(), term, year, date };
+    if (editingId) {
+      updateExam(editingId, payload);
+    } else {
+      addExam(payload);
+    }
     setName("");
+    setEditingId(null);
     setOpen(false);
   };
 
@@ -47,11 +70,11 @@ function ExamsPage() {
         actions={
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button><Plus className="h-4 w-4" /> New exam</Button>
+              <Button onClick={openCreate}><Plus className="h-4 w-4" /> New exam</Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Add exam</DialogTitle>
+                <DialogTitle>{editingId ? "Edit exam" : "Add exam"}</DialogTitle>
                 <DialogDescription>e.g. "Mid Term 1", "End Term 1".</DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4 sm:grid-cols-2">
@@ -70,7 +93,7 @@ function ExamsPage() {
                 <div className="space-y-2"><Label>Year</Label><Input type="number" value={year} onChange={(e) => setYear(Number(e.target.value))} /></div>
                 <div className="space-y-2 sm:col-span-2"><Label>Date</Label><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
               </div>
-              <DialogFooter><Button onClick={save}>Create</Button></DialogFooter>
+              <DialogFooter><Button onClick={save}>{editingId ? "Save" : "Create"}</Button></DialogFooter>
             </DialogContent>
           </Dialog>
         }
@@ -99,7 +122,10 @@ function ExamsPage() {
                     <TableCell>{e.year}</TableCell>
                     <TableCell>{e.date}</TableCell>
                     <TableCell className="text-right">
-                      <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete exam (and its marks)?")) { deleteExam(e.id); toast.success(`Exam "${e.name}" deleted`); } }}>
+                      <Button size="icon" variant="ghost" onClick={() => openEdit(e)}>
+                        <Edit3 className="h-4 w-4" />
+                      </Button>
+                      <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete exam (and its marks)?")) deleteExam(e.id); }}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </TableCell>
