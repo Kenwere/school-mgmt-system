@@ -312,28 +312,24 @@ function Landing() {
 function Highlight({ icon: Icon, title, body }: { icon: any; title: string; body: string }) {
   return (
     <div className="flex flex-col items-center text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-accent/10 text-accent ring-1 ring-accent/20">
         <Icon className="h-6 w-6" />
       </div>
-      <h3 className="mt-4 text-base font-semibold">{title}</h3>
-      <p className="mt-2 max-w-xs text-sm text-muted-foreground">{body}</p>
+      <h3 className="mt-5 text-lg font-semibold tracking-tight text-foreground">{title}</h3>
+      <p className="mt-2 max-w-xs text-sm leading-relaxed text-muted-foreground">{body}</p>
     </div>
   );
 }
 
 function FeatureCard({ icon: Icon, title, body }: { icon: any; title: string; body: string }) {
   return (
-    <Card className="border-muted/60 transition-shadow hover:shadow-md">
-      <CardHeader className="pb-2">
-        <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary">
-            <Icon className="h-4 w-4" />
-          </div>
-          <CardTitle className="text-sm font-semibold">{title}</CardTitle>
+    <Card className="group border-border/60 bg-card transition-all hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-lg">
+      <CardContent className="p-6">
+        <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-accent/10 text-accent transition-colors group-hover:bg-accent group-hover:text-accent-foreground">
+          <Icon className="h-5 w-5" />
         </div>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <CardDescription className="text-sm">{body}</CardDescription>
+        <h3 className="mt-5 text-base font-semibold tracking-tight text-foreground">{title}</h3>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>
       </CardContent>
     </Card>
   );
@@ -341,9 +337,9 @@ function FeatureCard({ icon: Icon, title, body }: { icon: any; title: string; bo
 
 function Stat({ number, label }: { number: string; label: string }) {
   return (
-    <div className="rounded-lg border border-background/15 bg-background/5 p-5">
-      <div className="text-3xl font-semibold text-primary">{number}</div>
-      <div className="mt-1 text-sm text-background/70">{label}</div>
+    <div className="rounded-xl border border-primary-foreground/15 bg-primary-foreground/5 p-6 backdrop-blur-sm">
+      <div className="text-3xl font-semibold tracking-tight text-accent-foreground">{number}</div>
+      <div className="mt-2 text-sm leading-relaxed text-primary-foreground/70">{label}</div>
     </div>
   );
 }
@@ -351,10 +347,10 @@ function Stat({ number, label }: { number: string; label: string }) {
 function FooterCol({ title, links }: { title: string; links: string[] }) {
   return (
     <div>
-      <h4 className="text-sm font-semibold">{title}</h4>
+      <h4 className="text-sm font-semibold tracking-tight text-foreground">{title}</h4>
       <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
         {links.map((l) => (
-          <li key={l}><a href="#" className="hover:text-foreground">{l}</a></li>
+          <li key={l}><a href="#" className="hover:text-accent">{l}</a></li>
         ))}
       </ul>
     </div>
