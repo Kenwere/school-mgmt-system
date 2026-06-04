@@ -111,7 +111,10 @@ function Landing() {
               Sign in
             </Button>
             {!hasSchool && (
-              <Button onClick={() => router.navigate({ to: "/register" })}>
+              <Button
+                className="bg-accent text-accent-foreground hover:bg-accent/90"
+                onClick={() => router.navigate({ to: "/register" })}
+              >
                 Register your school
               </Button>
             )}
