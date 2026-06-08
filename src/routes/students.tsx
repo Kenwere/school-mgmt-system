@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { Link, createFileRoute } from "@tanstack/react-router";
+import { useRef, useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { PermissionGate } from "@/components/permission-gate";
 import { Button } from "@/components/ui/button";
@@ -9,8 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Edit3, Trash2 } from "lucide-react";
-import { addStudent, deleteStudent, updateStudent, useStore, type Student } from "@/lib/store";
+import { Plus, Edit3, Trash2, Upload, X } from "lucide-react";
+import { addStudent, deleteStudent, formatKES, updateStudent, useStore, type Student } from "@/lib/store";
 
 export const Route = createFileRoute("/students")({
   head: () => ({ meta: [{ title: "Students — School Management" }] }),
@@ -28,11 +28,12 @@ type Form = {
   gender: string;
   classId: string;
   feePerYear: string;
+  image: string;
   parent: string;
   phone: string;
   email: string;
 };
-const blank: Form = { name: "", admissionNo: "", gender: "Male", classId: "", feePerYear: "", parent: "", phone: "", email: "" };
+const blank: Form = { name: "", admissionNo: "", gender: "Male", classId: "", feePerYear: "", image: "", parent: "", phone: "", email: "" };
 
 function StudentsPage() {
   const store = useStore();
@@ -41,6 +42,7 @@ function StudentsPage() {
   const [form, setForm] = useState<Form>(blank);
   const [classFilter, setClassFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const filtered = store.students.filter((s) => {
     if (classFilter !== "all" && s.classId !== classFilter) return false;
@@ -54,26 +56,40 @@ function StudentsPage() {
     setOpen(true);
   };
   const openEdit = (s: Student) => {
-    setForm({ ...s, feePerYear: s.feePerYear ? String(s.feePerYear) : "", email: s.email ?? "" });
+    setForm({ ...s, feePerYear: s.feePerYear ? String(s.feePerYear) : "", image: s.image ?? "", email: s.email ?? "" });
     setEditing(true);
     setOpen(true);
   };
 
-  const save = () => {
+  const selectedClass = store.classes.find((c) => c.id === form.classId);
+
+  const onImage = (f: File | null) => {
+    if (!f) return;
+    if (f.size > 2 * 1024 * 1024) {
+      alert("Image must be smaller than 2MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setForm((current) => ({ ...current, image: String(reader.result || "") }));
+    reader.readAsDataURL(f);
+  };
+
+  const save = async () => {
     const payload = {
       name: form.name.trim(),
       admissionNo: form.admissionNo.trim(),
       gender: form.gender,
       classId: form.classId,
-      feePerYear: form.feePerYear ? Number(form.feePerYear) || 0 : undefined,
+      feePerYear: form.feePerYear ? Number(form.feePerYear) || 0 : selectedClass?.feePerYear,
+      image: form.image || undefined,
       parent: form.parent.trim(),
       phone: form.phone.trim(),
       email: form.email.trim() || undefined,
     };
     if (editing && form.id) {
-      updateStudent(form.id, payload);
+      await updateStudent(form.id, payload);
     } else {
-      addStudent(payload);
+      await addStudent(payload);
     }
     setOpen(false);
   };
@@ -107,6 +123,29 @@ function StudentsPage() {
                   <DialogDescription>Capture admission details.</DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4 sm:grid-cols-2">
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label>Student image</Label>
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-md border bg-muted">
+                        {form.image ? (
+                          <img src={form.image} alt={form.name || "Student"} className="h-full w-full object-cover" />
+                        ) : (
+                          <span className="text-xs text-muted-foreground">No image</span>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => onImage(e.target.files?.[0] ?? null)} />
+                        <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
+                          <Upload className="h-4 w-4" /> Upload
+                        </Button>
+                        {form.image && (
+                          <Button type="button" variant="ghost" size="sm" onClick={() => setForm({ ...form, image: "" })}>
+                            <X className="h-4 w-4" /> Delete
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                   <div className="space-y-2 sm:col-span-2"><Label>Full name</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
                   <div className="space-y-2"><Label>Admission no.</Label><Input value={form.admissionNo} onChange={(e) => setForm({ ...form, admissionNo: e.target.value })} /></div>
                   <div className="space-y-2">
@@ -132,13 +171,8 @@ function StudentsPage() {
                     </Select>
                   </div>
                   <div className="space-y-2 sm:col-span-2">
-                    <Label>Annual fee override (KES)</Label>
-                    <Input
-                      type="number"
-                      value={form.feePerYear}
-                      onChange={(e) => setForm({ ...form, feePerYear: e.target.value })}
-                      placeholder="Leave blank to use class fee"
-                    />
+                    <Label>Assigned annual fee</Label>
+                    <Input readOnly value={formatKES(selectedClass?.feePerYear ?? 0)} />
                   </div>
                   <div className="space-y-2"><Label>Parent / Guardian</Label><Input value={form.parent} onChange={(e) => setForm({ ...form, parent: e.target.value })} /></div>
                   <div className="space-y-2"><Label>Phone</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
@@ -157,6 +191,7 @@ function StudentsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Adm. No</TableHead>
+                  <TableHead>Photo</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Class</TableHead>
                   <TableHead className="text-right">Annual fee</TableHead>
@@ -168,14 +203,23 @@ function StudentsPage() {
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 && (
-                  <TableRow><TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-10">No students yet.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={9} className="text-center text-sm text-muted-foreground py-10">No students yet.</TableCell></TableRow>
                 )}
                 {filtered.map((s) => {
                   const cls = store.classes.find((c) => c.id === s.classId);
                   return (
                     <TableRow key={s.id}>
                       <TableCell className="font-mono text-xs">{s.admissionNo}</TableCell>
-                      <TableCell className="font-medium">{s.name}</TableCell>
+                      <TableCell>
+                        <div className="h-9 w-9 overflow-hidden rounded-md border bg-muted">
+                          {s.image && <img src={s.image} alt={s.name} className="h-full w-full object-cover" />}
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        <Link to="/students/$studentId" params={{ studentId: s.id }} className="hover:underline">
+                          {s.name}
+                        </Link>
+                      </TableCell>
                       <TableCell>{cls?.name ?? "—"}</TableCell>
                       <TableCell className="text-right tabular-nums">
                         {(s.feePerYear ?? cls?.feePerYear ?? 0).toLocaleString()}

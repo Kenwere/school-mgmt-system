@@ -35,7 +35,9 @@ type Form = {
   stream: string;
   teacher: string;
   room: string;
-  feePerYear: string;
+  feeTerm1: string;
+  feeTerm2: string;
+  feeTerm3: string;
   subjects: string;
 };
 
@@ -44,7 +46,9 @@ const blank: Form = {
   stream: "",
   teacher: "",
   room: "",
-  feePerYear: "0",
+  feeTerm1: "0",
+  feeTerm2: "0",
+  feeTerm3: "0",
   subjects: DEFAULT_SUBJECTS.join(", "),
 };
 
@@ -62,7 +66,9 @@ function ClassesPage() {
       stream: c.stream ?? "",
       teacher: c.teacher ?? "",
       room: c.room ?? "",
-      feePerYear: String(c.feePerYear),
+      feeTerm1: String(c.feeTerm1),
+      feeTerm2: String(c.feeTerm2),
+      feeTerm3: String(c.feeTerm3),
       subjects: c.subjects.join(", "),
     });
     setEditing(true);
@@ -71,12 +77,18 @@ function ClassesPage() {
 
   const save = () => {
     const subjects = form.subjects.split(",").map((s) => s.trim()).filter(Boolean);
+    const feeTerm1 = Number(form.feeTerm1) || 0;
+    const feeTerm2 = Number(form.feeTerm2) || 0;
+    const feeTerm3 = Number(form.feeTerm3) || 0;
     const payload = {
       name: form.name.trim(),
       stream: form.stream.trim(),
       teacher: form.teacher.trim(),
       room: form.room.trim(),
-      feePerYear: Number(form.feePerYear) || 0,
+      feeTerm1,
+      feeTerm2,
+      feeTerm3,
+      feePerYear: feeTerm1 + feeTerm2 + feeTerm3,
       subjects,
     };
     if (editing && form.id) {
@@ -100,7 +112,7 @@ function ClassesPage() {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>{editing ? "Edit class" : "New class"}</DialogTitle>
-                <DialogDescription>Set fee per year — the system divides it into 3 terms.</DialogDescription>
+                <DialogDescription>Enter the fee expected for each term.</DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-2 gap-3">
@@ -109,10 +121,22 @@ function ClassesPage() {
                   <div className="space-y-2"><Label>Class teacher</Label><Input value={form.teacher} onChange={(e) => setForm({ ...form, teacher: e.target.value })} /></div>
                   <div className="space-y-2"><Label>Room</Label><Input value={form.room} onChange={(e) => setForm({ ...form, room: e.target.value })} /></div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Fee per year (KES)</Label>
-                  <Input type="number" value={form.feePerYear} onChange={(e) => setForm({ ...form, feePerYear: e.target.value })} />
-                  <p className="text-xs text-muted-foreground">Per term: {formatKES((Number(form.feePerYear) || 0) / 3)}</p>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-2">
+                    <Label>First term fee</Label>
+                    <Input type="number" value={form.feeTerm1} onChange={(e) => setForm({ ...form, feeTerm1: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Second term fee</Label>
+                    <Input type="number" value={form.feeTerm2} onChange={(e) => setForm({ ...form, feeTerm2: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Third term fee</Label>
+                    <Input type="number" value={form.feeTerm3} onChange={(e) => setForm({ ...form, feeTerm3: e.target.value })} />
+                  </div>
+                  <p className="col-span-3 text-xs text-muted-foreground">
+                    Annual total: {formatKES((Number(form.feeTerm1) || 0) + (Number(form.feeTerm2) || 0) + (Number(form.feeTerm3) || 0))}
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label>Subjects (comma separated)</Label>
@@ -145,7 +169,8 @@ function ClassesPage() {
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
                 <div className="flex items-center gap-2 text-muted-foreground"><Users className="h-4 w-4" />{students} students</div>
-                <div className="flex items-center gap-2 text-muted-foreground"><Wallet className="h-4 w-4" />{formatKES(c.feePerYear)} / yr · {formatKES(c.feePerYear / 3)} / term</div>
+                <div className="flex items-center gap-2 text-muted-foreground"><Wallet className="h-4 w-4" />{formatKES(c.feePerYear)} / year</div>
+                <div className="text-xs text-muted-foreground">T1 {formatKES(c.feeTerm1)} · T2 {formatKES(c.feeTerm2)} · T3 {formatKES(c.feeTerm3)}</div>
                 <div className="flex items-center gap-2 text-muted-foreground"><BookOpen className="h-4 w-4" />{c.subjects.length} subjects</div>
               </CardContent>
               <CardFooter className="flex gap-2">

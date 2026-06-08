@@ -33,6 +33,7 @@ function RegisterPage() {
   const [adminPassword2, setAdminPassword2] = useState("");
 
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (store.school && !auth.user) {
@@ -58,6 +59,7 @@ function RegisterPage() {
     setError("");
     if (adminPassword.length < 4) return setError("Password must be at least 4 characters.");
     if (adminPassword !== adminPassword2) return setError("Passwords do not match.");
+    setIsSubmitting(true);
     try {
       await auth.register({
         school: {
@@ -76,6 +78,8 @@ function RegisterPage() {
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save school to Supabase.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -166,7 +170,9 @@ function RegisterPage() {
             {error && <p className="text-sm text-destructive">{error}</p>}
           </CardContent>
           <CardFooter className="flex flex-col gap-3">
-            <Button type="submit" className="w-full">Create school & sign in</Button>
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? "processing..." : "Create school & sign in"}
+            </Button>
             <Link to="/" className="text-center text-xs text-muted-foreground hover:text-foreground">
               ← Back to home
             </Link>

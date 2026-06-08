@@ -30,6 +30,9 @@ create table if not exists public.classes (
   teacher text,
   room text,
   subjects text[] not null default '{}',
+  fee_term_1 numeric not null default 0,
+  fee_term_2 numeric not null default 0,
+  fee_term_3 numeric not null default 0,
   fee_per_year numeric not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -43,6 +46,7 @@ create table if not exists public.students (
   gender text not null default '',
   class_id uuid references public.classes(id) on delete set null,
   fee_per_year numeric,
+  image text,
   parent text not null default '',
   phone text not null default '',
   email text,
@@ -80,11 +84,18 @@ create table if not exists public.payments (
   term integer not null check (term in (1, 2, 3)),
   amount numeric not null default 0,
   date date not null,
+  paid_at timestamptz not null default now(),
   method text not null default '',
   ref text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.classes add column if not exists fee_term_1 numeric not null default 0;
+alter table public.classes add column if not exists fee_term_2 numeric not null default 0;
+alter table public.classes add column if not exists fee_term_3 numeric not null default 0;
+alter table public.students add column if not exists image text;
+alter table public.payments add column if not exists paid_at timestamptz not null default now();
 
 alter table public.schools enable row level security;
 alter table public.users enable row level security;

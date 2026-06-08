@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Edit3, Plus, Trash2, Wallet } from "lucide-react";
+import { Edit3, Printer, Search, Trash2, Wallet } from "lucide-react";
 import { addPayment, deletePayment, feeStatusForStudent, formatKES, updatePayment, useStore, type Payment, type Term } from "@/lib/store";
 
 export const Route = createFileRoute("/fees")({
@@ -25,6 +25,7 @@ export const Route = createFileRoute("/fees")({
 function FeesPage() {
   const store = useStore();
   const [classFilter, setClassFilter] = useState<string>("all");
+  const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
   const [studentId, setStudentId] = useState("");
@@ -32,9 +33,15 @@ function FeesPage() {
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState("M-Pesa");
   const [ref, setRef] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(toDateTimeLocal(new Date()));
 
-  const students = store.students.filter((s) => classFilter === "all" || s.classId === classFilter);
+  const students = store.students.filter((s) => {
+    if (classFilter !== "all" && s.classId !== classFilter) return false;
+    if (search && !`${s.name} ${s.admissionNo}`.toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
+  const selectedStudent = store.students.find((x) => x.id === studentId);
+  const selectedFee = studentId ? feeStatusForStudent(studentId) : null;
 
   const openFor = (sid: string) => {
     setEditingPaymentId(null);
@@ -42,7 +49,7 @@ function FeesPage() {
     setAmount("");
     setRef("");
     setTerm(1);
-    setDate(new Date().toISOString().slice(0, 10));
+    setDate(toDateTimeLocal(new Date()));
     setOpen(true);
   };
 
@@ -53,11 +60,11 @@ function FeesPage() {
     setAmount(String(payment.amount));
     setMethod(payment.method);
     setRef(payment.ref ?? "");
-    setDate(payment.date);
+    setDate(toDateTimeLocal(new Date(payment.date)));
     setOpen(true);
   };
 
-  const save = () => {
+  const save = async () => {
     if (!studentId || !amount) return;
     const amt = Number(amount) || 0;
     const payload = {
@@ -69,9 +76,9 @@ function FeesPage() {
       date,
     };
     if (editingPaymentId) {
-      updatePayment(editingPaymentId, payload);
+      await updatePayment(editingPaymentId, payload);
     } else {
-      addPayment(payload);
+      await addPayment(payload);
     }
     setEditingPaymentId(null);
     setOpen(false);
@@ -94,15 +101,26 @@ function FeesPage() {
         title="Fees"
         description="Each class fee is split into 3 terms automatically. Record payments per term."
         actions={
-          <Select value={classFilter} onValueChange={setClassFilter}>
-            <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All classes</SelectItem>
-              {store.classes.map((c) => (
-                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search admission no. or name"
+                className="w-64 pl-9"
+              />
+            </div>
+            <Select value={classFilter} onValueChange={setClassFilter}>
+              <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All classes</SelectItem>
+                {store.classes.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </>
         }
       />
       <div className="space-y-6 p-6">
@@ -154,7 +172,7 @@ function FeesPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <Button size="sm" variant="outline" onClick={() => openFor(st.id)}>
-                          <Wallet className="h-4 w-4" /> Record
+                          <Wallet className="h-4 w-4" /> Record payment
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -188,7 +206,7 @@ function FeesPage() {
                   const s = store.students.find((x) => x.id === p.studentId);
                   return (
                     <TableRow key={p.id}>
-                      <TableCell>{p.date}</TableCell>
+                        <TableCell>{new Date(p.date).toLocaleString()}</TableCell>
                       <TableCell>{s?.name ?? "—"}</TableCell>
                       <TableCell><Badge variant="outline">Term {p.term}</Badge></TableCell>
                       <TableCell className="text-right tabular-nums">{formatKES(p.amount)}</TableCell>
@@ -197,6 +215,9 @@ function FeesPage() {
                       <TableCell className="text-right">
                         <Button size="icon" variant="ghost" onClick={() => openEditPayment(p)}>
                           <Edit3 className="h-4 w-4" />
+                        </Button>
+                        <Button size="icon" variant="ghost" onClick={() => window.print()}>
+                          <Printer className="h-4 w-4" />
                         </Button>
                         <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete this payment?")) deletePayment(p.id); }}>
                           <Trash2 className="h-4 w-4 text-destructive" />
@@ -215,8 +236,15 @@ function FeesPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editingPaymentId ? "Edit payment" : "Record payment"}</DialogTitle>
-            <DialogDescription>{store.students.find((x) => x.id === studentId)?.name}</DialogDescription>
+            <DialogDescription>{selectedStudent ? `${selectedStudent.name} · ${selectedStudent.admissionNo}` : "Select a student"}</DialogDescription>
           </DialogHeader>
+          {selectedFee && (
+            <div className="grid gap-3 rounded-md border p-3 text-sm sm:grid-cols-3">
+              <div><div className="text-xs text-muted-foreground">Expected</div><div className="font-medium">{formatKES(selectedFee.expectedByTerm[term])}</div></div>
+              <div><div className="text-xs text-muted-foreground">Paid this term</div><div className="font-medium">{formatKES(selectedFee.byTerm[term])}</div></div>
+              <div><div className="text-xs text-muted-foreground">Balance</div><div className="font-medium">{formatKES(Math.max(0, selectedFee.expectedByTerm[term] - selectedFee.byTerm[term]))}</div></div>
+            </div>
+          )}
           <div className="grid gap-4 py-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Term</Label>
@@ -242,12 +270,20 @@ function FeesPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2"><Label>Date</Label><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
+            <div className="space-y-2"><Label>Date/time paid</Label><Input type="datetime-local" value={date} onChange={(e) => setDate(e.target.value)} /></div>
             <div className="space-y-2 sm:col-span-2"><Label>Reference (optional)</Label><Input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="e.g. MPESA QHJ123ABC" /></div>
           </div>
-          <DialogFooter><Button onClick={save}>{editingPaymentId ? "Save payment" : "Record payment"}</Button></DialogFooter>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => window.print()}><Printer className="h-4 w-4" /> Print</Button>
+            <Button onClick={save}>{editingPaymentId ? "Save payment" : "Save payment record"}</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
   );
+}
+
+function toDateTimeLocal(date: Date) {
+  const offsetMs = date.getTimezoneOffset() * 60 * 1000;
+  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
 }

@@ -30,6 +30,9 @@ export type ClassRow = {
   teacher?: string;
   room?: string;
   subjects: string[];
+  feeTerm1: number;
+  feeTerm2: number;
+  feeTerm3: number;
   feePerYear: number;
 };
 
@@ -40,6 +43,7 @@ export type Student = {
   gender: string;
   classId: ID;
   feePerYear?: number;
+  image?: string;
   parent: string;
   phone: string;
   email?: string;
@@ -192,7 +196,7 @@ export function initializeStoreFromSupabase() {
         db.from("students").select("*").order("created_at", { ascending: true }),
         db.from("exams").select("*").order("date", { ascending: false }),
         db.from("marks").select("*").order("created_at", { ascending: true }),
-        db.from("payments").select("*").order("date", { ascending: false }),
+        db.from("payments").select("*").order("paid_at", { ascending: false }),
       ]);
 
     const results = [schoolResult, usersResult, classesResult, studentsResult, examsResult, marksResult, paymentsResult];
@@ -218,15 +222,25 @@ export function initializeStoreFromSupabase() {
         role: row.role,
         permissions: row.permissions ?? [],
       })),
-      classes: (classesResult.data ?? []).map((row) => ({
-        id: row.id,
-        name: row.name,
-        stream: row.stream ?? undefined,
-        teacher: row.teacher ?? undefined,
-        room: row.room ?? undefined,
-        subjects: row.subjects ?? [],
-        feePerYear: Number(row.fee_per_year ?? 0),
-      })),
+      classes: (classesResult.data ?? []).map((row) => {
+        const feePerYear = Number(row.fee_per_year ?? 0);
+        const fallbackTermFee = feePerYear / 3;
+        const feeTerm1 = row.fee_term_1 == null ? fallbackTermFee : Number(row.fee_term_1);
+        const feeTerm2 = row.fee_term_2 == null ? fallbackTermFee : Number(row.fee_term_2);
+        const feeTerm3 = row.fee_term_3 == null ? fallbackTermFee : Number(row.fee_term_3);
+        return {
+          id: row.id,
+          name: row.name,
+          stream: row.stream ?? undefined,
+          teacher: row.teacher ?? undefined,
+          room: row.room ?? undefined,
+          subjects: row.subjects ?? [],
+          feeTerm1,
+          feeTerm2,
+          feeTerm3,
+          feePerYear: feeTerm1 + feeTerm2 + feeTerm3,
+        };
+      }),
       students: (studentsResult.data ?? []).map((row) => ({
         id: row.id,
         admissionNo: row.admission_no,
@@ -234,6 +248,7 @@ export function initializeStoreFromSupabase() {
         gender: row.gender,
         classId: row.class_id ?? "",
         feePerYear: row.fee_per_year == null ? undefined : Number(row.fee_per_year),
+        image: row.image ?? undefined,
         parent: row.parent,
         phone: row.phone,
         email: row.email ?? undefined,
@@ -257,7 +272,7 @@ export function initializeStoreFromSupabase() {
         studentId: row.student_id,
         term: row.term as Term,
         amount: Number(row.amount ?? 0),
-        date: row.date,
+        date: row.paid_at ?? row.date,
         method: row.method,
         ref: row.ref ?? undefined,
       })),
@@ -324,7 +339,7 @@ export async function registerSchool(input: {
     users: [adminUser],
     currentUserId: adminUser.id,
   };
-  commit(nextState, "School saved to Supabase");
+  commit(nextState, "Registration successful");
   return adminUser;
 }
 
@@ -409,6 +424,9 @@ export async function addClass(c: Omit<ClassRow, "id">) {
     teacher: item.teacher ?? null,
     room: item.room ?? null,
     subjects: item.subjects,
+    fee_term_1: item.feeTerm1,
+    fee_term_2: item.feeTerm2,
+    fee_term_3: item.feeTerm3,
     fee_per_year: item.feePerYear,
     updated_at: new Date().toISOString(),
   });
@@ -423,6 +441,9 @@ export async function updateClass(id: ID, patch: Partial<ClassRow>) {
     ...(patch.teacher !== undefined ? { teacher: patch.teacher ?? null } : {}),
     ...(patch.room !== undefined ? { room: patch.room ?? null } : {}),
     ...(patch.subjects !== undefined ? { subjects: patch.subjects } : {}),
+    ...(patch.feeTerm1 !== undefined ? { fee_term_1: patch.feeTerm1 } : {}),
+    ...(patch.feeTerm2 !== undefined ? { fee_term_2: patch.feeTerm2 } : {}),
+    ...(patch.feeTerm3 !== undefined ? { fee_term_3: patch.feeTerm3 } : {}),
     ...(patch.feePerYear !== undefined ? { fee_per_year: patch.feePerYear } : {}),
     updated_at: new Date().toISOString(),
   };
@@ -450,6 +471,7 @@ export async function addStudent(st: Omit<Student, "id">) {
     gender: item.gender,
     class_id: item.classId || null,
     fee_per_year: item.feePerYear ?? null,
+    image: item.image ?? null,
     parent: item.parent,
     phone: item.phone,
     email: item.email ?? null,
@@ -466,6 +488,7 @@ export async function updateStudent(id: ID, patch: Partial<Student>) {
     ...(patch.gender !== undefined ? { gender: patch.gender } : {}),
     ...(patch.classId !== undefined ? { class_id: patch.classId || null } : {}),
     ...(patch.feePerYear !== undefined ? { fee_per_year: patch.feePerYear ?? null } : {}),
+    ...(patch.image !== undefined ? { image: patch.image ?? null } : {}),
     ...(patch.parent !== undefined ? { parent: patch.parent } : {}),
     ...(patch.phone !== undefined ? { phone: patch.phone } : {}),
     ...(patch.email !== undefined ? { email: patch.email ?? null } : {}),
@@ -562,13 +585,15 @@ export async function deleteMark(id: ID) {
 export async function addPayment(p: Omit<Payment, "id">) {
   const db = requireSupabase();
   const item = { ...p, id: uid() };
+  const paidAt = item.date || new Date().toISOString();
   const { error } = await db.from("payments").insert({
     id: item.id,
     school_id: SCHOOL_ID,
     student_id: item.studentId,
     term: item.term,
     amount: item.amount,
-    date: item.date,
+    date: paidAt.slice(0, 10),
+    paid_at: paidAt,
     method: item.method,
     ref: item.ref ?? null,
     updated_at: new Date().toISOString(),
@@ -582,7 +607,7 @@ export async function updatePayment(id: ID, patch: Partial<Payment>) {
     ...(patch.studentId !== undefined ? { student_id: patch.studentId } : {}),
     ...(patch.term !== undefined ? { term: patch.term } : {}),
     ...(patch.amount !== undefined ? { amount: patch.amount } : {}),
-    ...(patch.date !== undefined ? { date: patch.date } : {}),
+    ...(patch.date !== undefined ? { date: patch.date.slice(0, 10), paid_at: patch.date } : {}),
     ...(patch.method !== undefined ? { method: patch.method } : {}),
     ...(patch.ref !== undefined ? { ref: patch.ref ?? null } : {}),
     updated_at: new Date().toISOString(),
@@ -645,6 +670,13 @@ export function feeStatusForStudent(studentId: ID) {
   if (!st) return null;
   const cls = s.classes.find((c) => c.id === st.classId);
   const yearly = st.feePerYear ?? cls?.feePerYear ?? 0;
+  const expectedByTerm: Record<Term, number> = st.feePerYear
+    ? { 1: st.feePerYear / 3, 2: st.feePerYear / 3, 3: st.feePerYear / 3 }
+    : {
+        1: cls?.feeTerm1 ?? yearly / 3,
+        2: cls?.feeTerm2 ?? yearly / 3,
+        3: cls?.feeTerm3 ?? yearly / 3,
+      };
   const perTerm = yearly / 3;
   const byTerm: Record<Term, number> = { 1: 0, 2: 0, 3: 0 };
   for (const p of s.payments.filter((p) => p.studentId === studentId)) {
@@ -655,6 +687,7 @@ export function feeStatusForStudent(studentId: ID) {
     student: st,
     class: cls,
     byTerm,
+    expectedByTerm,
     perTerm,
     yearly,
     paidTotal,
