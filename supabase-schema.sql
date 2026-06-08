@@ -1,30 +1,130 @@
-create table if not exists public.app_state (
-  id text primary key,
-  data jsonb not null default '{}'::jsonb,
+create table if not exists public.schools (
+  id text primary key default 'default',
+  name text not null,
+  logo text not null default '',
+  address text not null default '',
+  phone text not null default '',
+  email text not null default '',
+  motto text not null default '',
+  created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
-alter table public.app_state enable row level security;
+create table if not exists public.users (
+  id uuid primary key,
+  school_id text not null default 'default' references public.schools(id) on delete cascade,
+  name text not null,
+  email text not null unique,
+  password text not null,
+  role text not null check (role in ('admin', 'teacher')),
+  permissions text[] not null default '{}',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
 
-drop policy if exists "Allow app state reads" on public.app_state;
-create policy "Allow app state reads"
-on public.app_state
-for select
-to anon, authenticated
-using (true);
+create table if not exists public.classes (
+  id uuid primary key,
+  school_id text not null default 'default' references public.schools(id) on delete cascade,
+  name text not null,
+  stream text,
+  teacher text,
+  room text,
+  subjects text[] not null default '{}',
+  fee_per_year numeric not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
 
-drop policy if exists "Allow app state writes" on public.app_state;
-create policy "Allow app state writes"
-on public.app_state
-for insert
-to anon, authenticated
-with check (true);
+create table if not exists public.students (
+  id uuid primary key,
+  school_id text not null default 'default' references public.schools(id) on delete cascade,
+  admission_no text not null,
+  name text not null,
+  gender text not null default '',
+  class_id uuid references public.classes(id) on delete set null,
+  fee_per_year numeric,
+  parent text not null default '',
+  phone text not null default '',
+  email text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
 
-drop policy if exists "Allow app state updates" on public.app_state;
-create policy "Allow app state updates"
-on public.app_state
-for update
-to anon, authenticated
-using (true)
-with check (true);
+create table if not exists public.exams (
+  id uuid primary key,
+  school_id text not null default 'default' references public.schools(id) on delete cascade,
+  name text not null,
+  term integer not null check (term in (1, 2, 3)),
+  year integer not null,
+  date date not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
 
+create table if not exists public.marks (
+  id uuid primary key,
+  school_id text not null default 'default' references public.schools(id) on delete cascade,
+  exam_id uuid not null references public.exams(id) on delete cascade,
+  student_id uuid not null references public.students(id) on delete cascade,
+  subject text not null,
+  score numeric not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (exam_id, student_id, subject)
+);
+
+create table if not exists public.payments (
+  id uuid primary key,
+  school_id text not null default 'default' references public.schools(id) on delete cascade,
+  student_id uuid not null references public.students(id) on delete cascade,
+  term integer not null check (term in (1, 2, 3)),
+  amount numeric not null default 0,
+  date date not null,
+  method text not null default '',
+  ref text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.schools enable row level security;
+alter table public.users enable row level security;
+alter table public.classes enable row level security;
+alter table public.students enable row level security;
+alter table public.exams enable row level security;
+alter table public.marks enable row level security;
+alter table public.payments enable row level security;
+
+drop policy if exists "Allow school reads" on public.schools;
+create policy "Allow school reads" on public.schools for select to anon, authenticated using (true);
+drop policy if exists "Allow school writes" on public.schools;
+create policy "Allow school writes" on public.schools for all to anon, authenticated using (true) with check (true);
+
+drop policy if exists "Allow user reads" on public.users;
+create policy "Allow user reads" on public.users for select to anon, authenticated using (true);
+drop policy if exists "Allow user writes" on public.users;
+create policy "Allow user writes" on public.users for all to anon, authenticated using (true) with check (true);
+
+drop policy if exists "Allow class reads" on public.classes;
+create policy "Allow class reads" on public.classes for select to anon, authenticated using (true);
+drop policy if exists "Allow class writes" on public.classes;
+create policy "Allow class writes" on public.classes for all to anon, authenticated using (true) with check (true);
+
+drop policy if exists "Allow student reads" on public.students;
+create policy "Allow student reads" on public.students for select to anon, authenticated using (true);
+drop policy if exists "Allow student writes" on public.students;
+create policy "Allow student writes" on public.students for all to anon, authenticated using (true) with check (true);
+
+drop policy if exists "Allow exam reads" on public.exams;
+create policy "Allow exam reads" on public.exams for select to anon, authenticated using (true);
+drop policy if exists "Allow exam writes" on public.exams;
+create policy "Allow exam writes" on public.exams for all to anon, authenticated using (true) with check (true);
+
+drop policy if exists "Allow mark reads" on public.marks;
+create policy "Allow mark reads" on public.marks for select to anon, authenticated using (true);
+drop policy if exists "Allow mark writes" on public.marks;
+create policy "Allow mark writes" on public.marks for all to anon, authenticated using (true) with check (true);
+
+drop policy if exists "Allow payment reads" on public.payments;
+create policy "Allow payment reads" on public.payments for select to anon, authenticated using (true);
+drop policy if exists "Allow payment writes" on public.payments;
+create policy "Allow payment writes" on public.payments for all to anon, authenticated using (true) with check (true);

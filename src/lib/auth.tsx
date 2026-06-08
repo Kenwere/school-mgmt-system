@@ -51,7 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const register = React.useCallback(
     async (input: Parameters<typeof storeRegister>[0]) => {
-      storeRegister(input);
+      await storeRegister(input);
       await router.navigate({ to: "/" });
     },
     [router],

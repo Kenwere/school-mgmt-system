@@ -58,21 +58,25 @@ function RegisterPage() {
     setError("");
     if (adminPassword.length < 4) return setError("Password must be at least 4 characters.");
     if (adminPassword !== adminPassword2) return setError("Passwords do not match.");
-    await auth.register({
-      school: {
-        name: schoolName.trim(),
-        logo,
-        address: address.trim(),
-        phone: phone.trim(),
-        email: schoolEmail.trim(),
-        motto: motto.trim(),
-      },
-      admin: {
-        name: adminName.trim(),
-        email: adminEmail.trim(),
-        password: adminPassword,
-      },
-    });
+    try {
+      await auth.register({
+        school: {
+          name: schoolName.trim(),
+          logo,
+          address: address.trim(),
+          phone: phone.trim(),
+          email: schoolEmail.trim(),
+          motto: motto.trim(),
+        },
+        admin: {
+          name: adminName.trim(),
+          email: adminEmail.trim(),
+          password: adminPassword,
+        },
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save school to Supabase.");
+    }
   };
 
   return (

@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { updateSchool, useStore } from "@/lib/store";
+import { syncStoreToSupabase, updateSchool, useStore } from "@/lib/store";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({ meta: [{ title: "Settings — Northfield Academy" }] }),
@@ -18,6 +18,7 @@ function SettingsPage() {
   const [name, setName] = useState(store.school?.name ?? "");
   const [motto, setMotto] = useState(store.school?.motto ?? "");
   const [email, setEmail] = useState(store.school?.email ?? "");
+  const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
     setName(store.school?.name ?? "");
@@ -31,6 +32,15 @@ function SettingsPage() {
       motto: motto.trim(),
       email: email.trim(),
     });
+  };
+
+  const syncNow = async () => {
+    setIsSyncing(true);
+    try {
+      await syncStoreToSupabase();
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   return (
@@ -62,9 +72,18 @@ function SettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle>Integrations</CardTitle>
-            <CardDescription>Connect payment & communication channels.</CardDescription>
+            <CardDescription>Supabase sync and communication channels.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="flex items-center justify-between rounded-md border p-3">
+              <div>
+                <div className="text-sm font-medium">Supabase Database</div>
+                <div className="text-xs text-muted-foreground">Reload the latest school data from Supabase.</div>
+              </div>
+              <Button variant="outline" onClick={syncNow} disabled={isSyncing}>
+                {isSyncing ? "Loading..." : "Reload"}
+              </Button>
+            </div>
             {[
               { name: "Safaricom M-Pesa", desc: "Accept mobile money payments", on: true },
               { name: "SMS Gateway (Africa's Talking)", desc: "Bulk SMS for parents & staff", on: true },

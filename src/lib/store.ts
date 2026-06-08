@@ -18,7 +18,7 @@ export type User = {
   id: ID;
   name: string;
   email: string;
-  password: string; // demo only — plain text in localStorage
+  password: string; // demo only - plain text in Supabase
   role: "admin" | "teacher";
   permissions: string[]; // route paths the teacher can access; ignored for admin
 };
@@ -118,9 +118,7 @@ const DEFAULT_TEACHER_PERMISSIONS = [
   "/reports",
 ];
 
-const KEY = "sms-store-v1";
-const SUPABASE_STATE_TABLE = "app_state";
-const SUPABASE_STATE_ROW_ID = "default";
+const SCHOOL_ID = "default";
 
 const emptyState: State = {
   school: null,
@@ -133,84 +131,39 @@ const emptyState: State = {
   currentUserId: null,
 };
 
-function load(): State {
-  if (typeof window === "undefined") return emptyState;
-  try {
-    const raw = window.localStorage.getItem(KEY);
-    if (!raw) return emptyState;
-    return { ...emptyState, ...JSON.parse(raw) };
-  } catch {
-    return emptyState;
-  }
-}
-
-let state: State = load();
+let state: State = emptyState;
 const listeners = new Set<() => void>();
 let hasWarnedAboutSupabase = false;
 let hydratePromise: Promise<void> | null = null;
-let saveTimer: ReturnType<typeof setTimeout> | null = null;
 
 function notify() {
   listeners.forEach((l) => l());
 }
 
-function isEmptyStateSnapshot(snapshot: State) {
-  return (
-    !snapshot.school &&
-    snapshot.users.length === 0 &&
-    snapshot.classes.length === 0 &&
-    snapshot.students.length === 0 &&
-    snapshot.exams.length === 0 &&
-    snapshot.marks.length === 0 &&
-    snapshot.payments.length === 0
-  );
-}
-
-function persistLocal() {
-  if (typeof window !== "undefined") {
-    window.localStorage.setItem(KEY, JSON.stringify(state));
-  }
-}
-
-async function saveRemote(snapshot: State) {
+function requireSupabase() {
   if (!supabase) {
+    const message =
+      "Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY, then restart/redeploy.";
     if (!hasWarnedAboutSupabase && typeof window !== "undefined" && !isSupabaseConfigured) {
       hasWarnedAboutSupabase = true;
-      console.warn("Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.");
+      toast.error(message);
+      console.warn(message);
     }
-    return;
+    throw new Error(message);
   }
-
-  const { error } = await supabase.from(SUPABASE_STATE_TABLE).upsert({
-    id: SUPABASE_STATE_ROW_ID,
-    data: snapshot,
-    updated_at: new Date().toISOString(),
-  });
-
-  if (error) {
-    toast.error(`Supabase sync failed: ${error.message}`);
-  }
+  return supabase;
 }
 
-function queueRemoteSave() {
-  if (typeof window === "undefined") return;
-  if (saveTimer) window.clearTimeout(saveTimer);
-  const snapshot = state;
-  saveTimer = window.setTimeout(() => {
-    void saveRemote(snapshot);
-  }, 300);
-}
-
-function persist() {
-  persistLocal();
+function commit(nextState: State, message?: string) {
+  state = nextState;
   notify();
-  queueRemoteSave();
+  if (message) toast.success(message);
 }
 
-function set(updater: (s: State) => State, message?: string) {
-  state = updater(state);
-  persist();
-  if (message) toast.success(message);
+function showSupabaseError(action: string, error: { message: string }) {
+  const message = `${action} failed: ${error.message}`;
+  toast.error(message);
+  throw new Error(message);
 }
 
 function subscribe(cb: () => void) {
@@ -229,37 +182,96 @@ export function initializeStoreFromSupabase() {
   if (hydratePromise) return hydratePromise;
 
   hydratePromise = (async () => {
-    if (!supabase) return;
+    const db = requireSupabase();
 
-    const { data, error } = await supabase
-      .from(SUPABASE_STATE_TABLE)
-      .select("data")
-      .eq("id", SUPABASE_STATE_ROW_ID)
-      .maybeSingle();
+    const [schoolResult, usersResult, classesResult, studentsResult, examsResult, marksResult, paymentsResult] =
+      await Promise.all([
+        db.from("schools").select("*").eq("id", SCHOOL_ID).maybeSingle(),
+        db.from("users").select("*").order("created_at", { ascending: true }),
+        db.from("classes").select("*").order("created_at", { ascending: true }),
+        db.from("students").select("*").order("created_at", { ascending: true }),
+        db.from("exams").select("*").order("date", { ascending: false }),
+        db.from("marks").select("*").order("created_at", { ascending: true }),
+        db.from("payments").select("*").order("date", { ascending: false }),
+      ]);
 
-    if (error) {
-      toast.error(`Could not load Supabase data: ${error.message}`);
-      return;
-    }
+    const results = [schoolResult, usersResult, classesResult, studentsResult, examsResult, marksResult, paymentsResult];
+    const failed = results.find((result) => result.error);
+    if (failed?.error) showSupabaseError("Loading Supabase data", failed.error);
 
-    if (data?.data) {
-      const remoteState = { ...emptyState, ...(data.data as State) };
-      if (isEmptyStateSnapshot(remoteState) && !isEmptyStateSnapshot(state)) {
-        await saveRemote(state);
-        return;
-      }
-      state = remoteState;
-      persistLocal();
-      notify();
-      return;
-    }
-
-    if (!isEmptyStateSnapshot(state)) {
-      await saveRemote(state);
-    }
+    commit({
+      school: schoolResult.data
+        ? {
+            name: schoolResult.data.name,
+            logo: schoolResult.data.logo ?? "",
+            address: schoolResult.data.address ?? "",
+            phone: schoolResult.data.phone ?? "",
+            email: schoolResult.data.email ?? "",
+            motto: schoolResult.data.motto ?? "",
+          }
+        : null,
+      users: (usersResult.data ?? []).map((row) => ({
+        id: row.id,
+        name: row.name,
+        email: row.email,
+        password: row.password,
+        role: row.role,
+        permissions: row.permissions ?? [],
+      })),
+      classes: (classesResult.data ?? []).map((row) => ({
+        id: row.id,
+        name: row.name,
+        stream: row.stream ?? undefined,
+        teacher: row.teacher ?? undefined,
+        room: row.room ?? undefined,
+        subjects: row.subjects ?? [],
+        feePerYear: Number(row.fee_per_year ?? 0),
+      })),
+      students: (studentsResult.data ?? []).map((row) => ({
+        id: row.id,
+        admissionNo: row.admission_no,
+        name: row.name,
+        gender: row.gender,
+        classId: row.class_id ?? "",
+        feePerYear: row.fee_per_year == null ? undefined : Number(row.fee_per_year),
+        parent: row.parent,
+        phone: row.phone,
+        email: row.email ?? undefined,
+      })),
+      exams: (examsResult.data ?? []).map((row) => ({
+        id: row.id,
+        name: row.name,
+        term: row.term as Term,
+        year: row.year,
+        date: row.date,
+      })),
+      marks: (marksResult.data ?? []).map((row) => ({
+        id: row.id,
+        examId: row.exam_id,
+        studentId: row.student_id,
+        subject: row.subject,
+        score: Number(row.score ?? 0),
+      })),
+      payments: (paymentsResult.data ?? []).map((row) => ({
+        id: row.id,
+        studentId: row.student_id,
+        term: row.term as Term,
+        amount: Number(row.amount ?? 0),
+        date: row.date,
+        method: row.method,
+        ref: row.ref ?? undefined,
+      })),
+      currentUserId: state.currentUserId,
+    });
   })();
 
   return hydratePromise;
+}
+
+export async function syncStoreToSupabase() {
+  hydratePromise = null;
+  await initializeStoreFromSupabase();
+  toast.success("Loaded latest data from Supabase");
 }
 
 export const uid = () =>
@@ -268,10 +280,11 @@ export const uid = () =>
     : Math.random().toString(36).slice(2) + Date.now().toString(36));
 
 // --- Auth ---
-export function registerSchool(input: {
+export async function registerSchool(input: {
   school: School;
   admin: { name: string; email: string; password: string };
 }) {
+  const db = requireSupabase();
   const adminUser: User = {
     id: uid(),
     name: input.admin.name,
@@ -280,12 +293,38 @@ export function registerSchool(input: {
     role: "admin",
     permissions: [],
   };
-  set((s) => ({
-    ...s,
+  const now = new Date().toISOString();
+  const schoolResult = await db.from("schools").upsert({
+    id: SCHOOL_ID,
+    name: input.school.name,
+    logo: input.school.logo,
+    address: input.school.address,
+    phone: input.school.phone,
+    email: input.school.email,
+    motto: input.school.motto,
+    updated_at: now,
+  });
+  if (schoolResult.error) showSupabaseError("School registration", schoolResult.error);
+
+  const userResult = await db.from("users").insert({
+    id: adminUser.id,
+    school_id: SCHOOL_ID,
+    name: adminUser.name,
+    email: adminUser.email,
+    password: adminUser.password,
+    role: adminUser.role,
+    permissions: adminUser.permissions,
+    updated_at: now,
+  });
+  if (userResult.error) showSupabaseError("Admin registration", userResult.error);
+
+  const nextState: State = {
+    ...state,
     school: input.school,
     users: [adminUser],
     currentUserId: adminUser.id,
-  }), `${input.school.name} is set up`);
+  };
+  commit(nextState, "School saved to Supabase");
   return adminUser;
 }
 
@@ -293,12 +332,12 @@ export function login(email: string, password: string): User | null {
   const e = email.toLowerCase().trim();
   const u = state.users.find((x) => x.email === e && x.password === password);
   if (!u) return null;
-  set((s) => ({ ...s, currentUserId: u.id }));
+  commit({ ...state, currentUserId: u.id });
   return u;
 }
 
 export function logout() {
-  set((s) => ({ ...s, currentUserId: null }));
+  commit({ ...state, currentUserId: null });
 }
 
 export function currentUser(): User | null {
@@ -312,7 +351,8 @@ export function hasPermission(user: User | null, path: string): boolean {
 }
 
 // --- Users / teachers ---
-export function addTeacher(input: { name: string; email: string; password: string }) {
+export async function addTeacher(input: { name: string; email: string; password: string }) {
+  const db = requireSupabase();
   const t: User = {
     id: uid(),
     name: input.name,
@@ -321,107 +361,260 @@ export function addTeacher(input: { name: string; email: string; password: strin
     role: "teacher",
     permissions: [...DEFAULT_TEACHER_PERMISSIONS],
   };
-  set((s) => ({ ...s, users: [...s.users, t] }), `Teacher "${t.name}" created`);
+  const { error } = await db.from("users").insert({
+    id: t.id,
+    school_id: SCHOOL_ID,
+    name: t.name,
+    email: t.email,
+    password: t.password,
+    role: t.role,
+    permissions: t.permissions,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) showSupabaseError("Creating teacher", error);
+  commit({ ...state, users: [...state.users, t] }, `Teacher "${t.name}" created`);
   return t;
 }
-export function updateUser(id: ID, patch: Partial<User>) {
-  set(
-    (s) => ({ ...s, users: s.users.map((u) => (u.id === id ? { ...u, ...patch } : u)) }),
-    "User updated",
-  );
+export async function updateUser(id: ID, patch: Partial<User>) {
+  const db = requireSupabase();
+  const dbPatch = {
+    ...(patch.name !== undefined ? { name: patch.name } : {}),
+    ...(patch.email !== undefined ? { email: patch.email.toLowerCase().trim() } : {}),
+    ...(patch.password !== undefined ? { password: patch.password } : {}),
+    ...(patch.role !== undefined ? { role: patch.role } : {}),
+    ...(patch.permissions !== undefined ? { permissions: patch.permissions } : {}),
+    updated_at: new Date().toISOString(),
+  };
+  const { error } = await db.from("users").update(dbPatch).eq("id", id);
+  if (error) showSupabaseError("Updating user", error);
+  commit({ ...state, users: state.users.map((u) => (u.id === id ? { ...u, ...patch } : u)) }, "User updated");
 }
-export function deleteUser(id: ID) {
+export async function deleteUser(id: ID) {
+  const db = requireSupabase();
   const user = state.users.find((u) => u.id === id);
-  set((s) => ({ ...s, users: s.users.filter((u) => u.id !== id) }), `Teacher "${user?.name ?? "user"}" deleted`);
+  const { error } = await db.from("users").delete().eq("id", id);
+  if (error) showSupabaseError("Deleting teacher", error);
+  commit({ ...state, users: state.users.filter((u) => u.id !== id) }, `Teacher "${user?.name ?? "user"}" deleted`);
 }
 
 // --- Classes ---
-export function addClass(c: Omit<ClassRow, "id">) {
-  set((s) => ({ ...s, classes: [...s.classes, { ...c, id: uid() }] }), `Class "${c.name}" created`);
+export async function addClass(c: Omit<ClassRow, "id">) {
+  const db = requireSupabase();
+  const item = { ...c, id: uid() };
+  const { error } = await db.from("classes").insert({
+    id: item.id,
+    school_id: SCHOOL_ID,
+    name: item.name,
+    stream: item.stream ?? null,
+    teacher: item.teacher ?? null,
+    room: item.room ?? null,
+    subjects: item.subjects,
+    fee_per_year: item.feePerYear,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) showSupabaseError("Creating class", error);
+  commit({ ...state, classes: [...state.classes, item] }, `Class "${c.name}" created`);
 }
-export function updateClass(id: ID, patch: Partial<ClassRow>) {
-  set((s) => ({
-    ...s,
-    classes: s.classes.map((c) => (c.id === id ? { ...c, ...patch } : c)),
-  }), `Class "${patch.name ?? "record"}" updated`);
+export async function updateClass(id: ID, patch: Partial<ClassRow>) {
+  const db = requireSupabase();
+  const dbPatch = {
+    ...(patch.name !== undefined ? { name: patch.name } : {}),
+    ...(patch.stream !== undefined ? { stream: patch.stream ?? null } : {}),
+    ...(patch.teacher !== undefined ? { teacher: patch.teacher ?? null } : {}),
+    ...(patch.room !== undefined ? { room: patch.room ?? null } : {}),
+    ...(patch.subjects !== undefined ? { subjects: patch.subjects } : {}),
+    ...(patch.feePerYear !== undefined ? { fee_per_year: patch.feePerYear } : {}),
+    updated_at: new Date().toISOString(),
+  };
+  const { error } = await db.from("classes").update(dbPatch).eq("id", id);
+  if (error) showSupabaseError("Updating class", error);
+  commit({ ...state, classes: state.classes.map((c) => (c.id === id ? { ...c, ...patch } : c)) }, `Class "${patch.name ?? "record"}" updated`);
 }
-export function deleteClass(id: ID) {
+export async function deleteClass(id: ID) {
+  const db = requireSupabase();
   const item = state.classes.find((c) => c.id === id);
-  set((s) => ({ ...s, classes: s.classes.filter((c) => c.id !== id) }), `Class "${item?.name ?? "record"}" deleted`);
+  const { error } = await db.from("classes").delete().eq("id", id);
+  if (error) showSupabaseError("Deleting class", error);
+  commit({ ...state, classes: state.classes.filter((c) => c.id !== id) }, `Class "${item?.name ?? "record"}" deleted`);
 }
 
 // --- Students ---
-export function addStudent(st: Omit<Student, "id">) {
-  set((s) => ({ ...s, students: [...s.students, { ...st, id: uid() }] }), `Student "${st.name}" created`);
+export async function addStudent(st: Omit<Student, "id">) {
+  const db = requireSupabase();
+  const item = { ...st, id: uid() };
+  const { error } = await db.from("students").insert({
+    id: item.id,
+    school_id: SCHOOL_ID,
+    admission_no: item.admissionNo,
+    name: item.name,
+    gender: item.gender,
+    class_id: item.classId || null,
+    fee_per_year: item.feePerYear ?? null,
+    parent: item.parent,
+    phone: item.phone,
+    email: item.email ?? null,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) showSupabaseError("Creating student", error);
+  commit({ ...state, students: [...state.students, item] }, `Student "${st.name}" created`);
 }
-export function updateStudent(id: ID, patch: Partial<Student>) {
-  set((s) => ({
-    ...s,
-    students: s.students.map((x) => (x.id === id ? { ...x, ...patch } : x)),
-  }), `Student "${patch.name ?? "record"}" updated`);
+export async function updateStudent(id: ID, patch: Partial<Student>) {
+  const db = requireSupabase();
+  const dbPatch = {
+    ...(patch.admissionNo !== undefined ? { admission_no: patch.admissionNo } : {}),
+    ...(patch.name !== undefined ? { name: patch.name } : {}),
+    ...(patch.gender !== undefined ? { gender: patch.gender } : {}),
+    ...(patch.classId !== undefined ? { class_id: patch.classId || null } : {}),
+    ...(patch.feePerYear !== undefined ? { fee_per_year: patch.feePerYear ?? null } : {}),
+    ...(patch.parent !== undefined ? { parent: patch.parent } : {}),
+    ...(patch.phone !== undefined ? { phone: patch.phone } : {}),
+    ...(patch.email !== undefined ? { email: patch.email ?? null } : {}),
+    updated_at: new Date().toISOString(),
+  };
+  const { error } = await db.from("students").update(dbPatch).eq("id", id);
+  if (error) showSupabaseError("Updating student", error);
+  commit({ ...state, students: state.students.map((x) => (x.id === id ? { ...x, ...patch } : x)) }, `Student "${patch.name ?? "record"}" updated`);
 }
-export function deleteStudent(id: ID) {
+export async function deleteStudent(id: ID) {
+  const db = requireSupabase();
   const item = state.students.find((x) => x.id === id);
-  set((s) => ({
-    ...s,
-    students: s.students.filter((x) => x.id !== id),
-    marks: s.marks.filter((m) => m.studentId !== id),
-    payments: s.payments.filter((p) => p.studentId !== id),
-  }), `Student "${item?.name ?? "record"}" deleted`);
+  const { error } = await db.from("students").delete().eq("id", id);
+  if (error) showSupabaseError("Deleting student", error);
+  commit({
+    ...state,
+    students: state.students.filter((x) => x.id !== id),
+    marks: state.marks.filter((m) => m.studentId !== id),
+    payments: state.payments.filter((p) => p.studentId !== id),
+  }, `Student "${item?.name ?? "record"}" deleted`);
 }
 
 // --- Exams ---
-export function addExam(e: Omit<Exam, "id">) {
-  set((s) => ({ ...s, exams: [...s.exams, { ...e, id: uid() }] }), `Exam "${e.name}" created`);
+export async function addExam(e: Omit<Exam, "id">) {
+  const db = requireSupabase();
+  const item = { ...e, id: uid() };
+  const { error } = await db.from("exams").insert({
+    id: item.id,
+    school_id: SCHOOL_ID,
+    name: item.name,
+    term: item.term,
+    year: item.year,
+    date: item.date,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) showSupabaseError("Creating exam", error);
+  commit({ ...state, exams: [...state.exams, item] }, `Exam "${e.name}" created`);
 }
-export function updateExam(id: ID, patch: Partial<Exam>) {
-  set((s) => ({ ...s, exams: s.exams.map((e) => (e.id === id ? { ...e, ...patch } : e)) }), "Exam updated");
+export async function updateExam(id: ID, patch: Partial<Exam>) {
+  const db = requireSupabase();
+  const dbPatch = {
+    ...(patch.name !== undefined ? { name: patch.name } : {}),
+    ...(patch.term !== undefined ? { term: patch.term } : {}),
+    ...(patch.year !== undefined ? { year: patch.year } : {}),
+    ...(patch.date !== undefined ? { date: patch.date } : {}),
+    updated_at: new Date().toISOString(),
+  };
+  const { error } = await db.from("exams").update(dbPatch).eq("id", id);
+  if (error) showSupabaseError("Updating exam", error);
+  commit({ ...state, exams: state.exams.map((e) => (e.id === id ? { ...e, ...patch } : e)) }, "Exam updated");
 }
-export function deleteExam(id: ID) {
+export async function deleteExam(id: ID) {
+  const db = requireSupabase();
   const item = state.exams.find((e) => e.id === id);
-  set((s) => ({
-    ...s,
-    exams: s.exams.filter((e) => e.id !== id),
-    marks: s.marks.filter((m) => m.examId !== id),
-  }), `Exam "${item?.name ?? "record"}" deleted`);
+  const { error } = await db.from("exams").delete().eq("id", id);
+  if (error) showSupabaseError("Deleting exam", error);
+  commit({
+    ...state,
+    exams: state.exams.filter((e) => e.id !== id),
+    marks: state.marks.filter((m) => m.examId !== id),
+  }, `Exam "${item?.name ?? "record"}" deleted`);
 }
 
 // --- Marks ---
-export function setMark(input: { examId: ID; studentId: ID; subject: string; score: number }) {
-  set((s) => {
-    const idx = s.marks.findIndex(
-      (m) =>
-        m.examId === input.examId &&
-        m.studentId === input.studentId &&
-        m.subject === input.subject,
-    );
-    const next = [...s.marks];
-    if (idx === -1) next.push({ ...input, id: uid() });
-    else next[idx] = { ...next[idx], score: input.score };
-    return { ...s, marks: next };
-  }, `Saved ${input.subject}: ${input.score}`);
+export async function setMark(input: { examId: ID; studentId: ID; subject: string; score: number }) {
+  const db = requireSupabase();
+  const existing = state.marks.find(
+    (m) => m.examId === input.examId && m.studentId === input.studentId && m.subject === input.subject,
+  );
+  const item: Mark = existing ? { ...existing, score: input.score } : { ...input, id: uid() };
+  const { error } = await db.from("marks").upsert({
+    id: item.id,
+    school_id: SCHOOL_ID,
+    exam_id: item.examId,
+    student_id: item.studentId,
+    subject: item.subject,
+    score: item.score,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: "exam_id,student_id,subject" });
+  if (error) showSupabaseError("Saving mark", error);
+  const nextMarks = existing
+    ? state.marks.map((m) => (m.id === item.id ? item : m))
+    : [...state.marks, item];
+  commit({ ...state, marks: nextMarks }, `Saved ${input.subject}: ${input.score}`);
 }
-export function deleteMark(id: ID) {
-  set((s) => ({ ...s, marks: s.marks.filter((m) => m.id !== id) }), "Mark deleted");
+export async function deleteMark(id: ID) {
+  const db = requireSupabase();
+  const { error } = await db.from("marks").delete().eq("id", id);
+  if (error) showSupabaseError("Deleting mark", error);
+  commit({ ...state, marks: state.marks.filter((m) => m.id !== id) }, "Mark deleted");
 }
 
 // --- Payments ---
-export function addPayment(p: Omit<Payment, "id">) {
-  set((s) => ({ ...s, payments: [...s.payments, { ...p, id: uid() }] }), `Payment of ${formatKES(p.amount)} recorded`);
+export async function addPayment(p: Omit<Payment, "id">) {
+  const db = requireSupabase();
+  const item = { ...p, id: uid() };
+  const { error } = await db.from("payments").insert({
+    id: item.id,
+    school_id: SCHOOL_ID,
+    student_id: item.studentId,
+    term: item.term,
+    amount: item.amount,
+    date: item.date,
+    method: item.method,
+    ref: item.ref ?? null,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) showSupabaseError("Recording payment", error);
+  commit({ ...state, payments: [...state.payments, item] }, `Payment of ${formatKES(p.amount)} recorded`);
 }
-export function updatePayment(id: ID, patch: Partial<Payment>) {
-  set((s) => ({
-    ...s,
-    payments: s.payments.map((p) => (p.id === id ? { ...p, ...patch } : p)),
-  }), "Payment updated");
+export async function updatePayment(id: ID, patch: Partial<Payment>) {
+  const db = requireSupabase();
+  const dbPatch = {
+    ...(patch.studentId !== undefined ? { student_id: patch.studentId } : {}),
+    ...(patch.term !== undefined ? { term: patch.term } : {}),
+    ...(patch.amount !== undefined ? { amount: patch.amount } : {}),
+    ...(patch.date !== undefined ? { date: patch.date } : {}),
+    ...(patch.method !== undefined ? { method: patch.method } : {}),
+    ...(patch.ref !== undefined ? { ref: patch.ref ?? null } : {}),
+    updated_at: new Date().toISOString(),
+  };
+  const { error } = await db.from("payments").update(dbPatch).eq("id", id);
+  if (error) showSupabaseError("Updating payment", error);
+  commit({ ...state, payments: state.payments.map((p) => (p.id === id ? { ...p, ...patch } : p)) }, "Payment updated");
 }
-export function deletePayment(id: ID) {
-  set((s) => ({ ...s, payments: s.payments.filter((p) => p.id !== id) }), "Payment deleted");
+export async function deletePayment(id: ID) {
+  const db = requireSupabase();
+  const { error } = await db.from("payments").delete().eq("id", id);
+  if (error) showSupabaseError("Deleting payment", error);
+  commit({ ...state, payments: state.payments.filter((p) => p.id !== id) }, "Payment deleted");
 }
 
 // --- School profile ---
-export function updateSchool(patch: Partial<School>) {
-  set((s) => ({ ...s, school: s.school ? { ...s.school, ...patch } : s.school }), "School profile updated");
+export async function updateSchool(patch: Partial<School>) {
+  const db = requireSupabase();
+  const nextSchool = state.school ? { ...state.school, ...patch } : null;
+  if (!nextSchool) return;
+  const { error } = await db.from("schools").upsert({
+    id: SCHOOL_ID,
+    name: nextSchool.name,
+    logo: nextSchool.logo,
+    address: nextSchool.address,
+    phone: nextSchool.phone,
+    email: nextSchool.email,
+    motto: nextSchool.motto,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) showSupabaseError("Updating school profile", error);
+  commit({ ...state, school: nextSchool }, "School profile updated");
 }
 
 // --- Derivations ---
