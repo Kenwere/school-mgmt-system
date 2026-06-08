@@ -1,4 +1,4 @@
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { PermissionGate } from "@/components/permission-gate";
@@ -37,6 +37,7 @@ const blank: Form = { name: "", admissionNo: "", gender: "Male", classId: "", fe
 
 function StudentsPage() {
   const store = useStore();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<Form>(blank);
@@ -208,7 +209,11 @@ function StudentsPage() {
                 {filtered.map((s) => {
                   const cls = store.classes.find((c) => c.id === s.classId);
                   return (
-                    <TableRow key={s.id}>
+                    <TableRow
+                      key={s.id}
+                      className="cursor-pointer"
+                      onClick={() => navigate({ to: "/student/$studentId", params: { studentId: s.id } })}
+                    >
                       <TableCell className="font-mono text-xs">{s.admissionNo}</TableCell>
                       <TableCell>
                         <div className="h-9 w-9 overflow-hidden rounded-md border bg-muted">
@@ -216,7 +221,7 @@ function StudentsPage() {
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">
-                        <Link to="/students/$studentId" params={{ studentId: s.id }} className="hover:underline">
+                        <Link to="/student/$studentId" params={{ studentId: s.id }} className="hover:underline">
                           {s.name}
                         </Link>
                       </TableCell>
@@ -228,8 +233,8 @@ function StudentsPage() {
                       <TableCell>{s.parent}</TableCell>
                       <TableCell>{s.phone}</TableCell>
                       <TableCell className="text-right">
-                        <Button size="icon" variant="ghost" onClick={() => openEdit(s)}><Edit3 className="h-4 w-4" /></Button>
-                        <Button size="icon" variant="ghost" onClick={() => { if (confirm(`Delete ${s.name}?`)) deleteStudent(s.id); }}>
+                        <Button size="icon" variant="ghost" onClick={(event) => { event.stopPropagation(); openEdit(s); }}><Edit3 className="h-4 w-4" /></Button>
+                        <Button size="icon" variant="ghost" onClick={(event) => { event.stopPropagation(); if (confirm(`Delete ${s.name}?`)) deleteStudent(s.id); }}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </TableCell>

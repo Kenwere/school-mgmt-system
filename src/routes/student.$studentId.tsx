@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { feeStatusForStudent, formatKES, useStore, type Term } from "@/lib/store";
 
-export const Route = createFileRoute("/students/$studentId")({
+export const Route = createFileRoute("/student/$studentId")({
   head: () => ({ meta: [{ title: "Student profile" }] }),
   component: () => (
     <PermissionGate path="/students">
@@ -42,7 +42,7 @@ function StudentDetailPage() {
     <>
       <PageHeader
         title={student.name}
-        description={`${student.admissionNo} · ${fee.class?.name ?? "No class"}`}
+        description={`${student.admissionNo} - ${fee.class?.name ?? "No class"}`}
         actions={
           <Button variant="outline" asChild>
             <Link to="/students"><ArrowLeft className="h-4 w-4" /> Students</Link>

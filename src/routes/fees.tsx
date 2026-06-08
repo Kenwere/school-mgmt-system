@@ -34,6 +34,7 @@ function FeesPage() {
   const [method, setMethod] = useState("M-Pesa");
   const [ref, setRef] = useState("");
   const [date, setDate] = useState(toDateTimeLocal(new Date()));
+  const [receiptPaymentId, setReceiptPaymentId] = useState<string | null>(null);
 
   const students = store.students.filter((s) => {
     if (classFilter !== "all" && s.classId !== classFilter) return false;
@@ -42,6 +43,10 @@ function FeesPage() {
   });
   const selectedStudent = store.students.find((x) => x.id === studentId);
   const selectedFee = studentId ? feeStatusForStudent(studentId) : null;
+  const receiptPayment = store.payments.find((payment) => payment.id === receiptPaymentId) ?? null;
+  const receiptStudent = receiptPayment ? store.students.find((student) => student.id === receiptPayment.studentId) ?? null : null;
+  const receiptFee = receiptPayment ? feeStatusForStudent(receiptPayment.studentId) : null;
+  const receiptClass = receiptFee?.class ?? null;
 
   const openFor = (sid: string) => {
     setEditingPaymentId(null);
@@ -84,6 +89,11 @@ function FeesPage() {
     setOpen(false);
   };
 
+  const printPayment = (payment: Payment) => {
+    setReceiptPaymentId(payment.id);
+    window.setTimeout(() => window.print(), 50);
+  };
+
   const totals = students.reduce(
     (acc, st) => {
       const f = feeStatusForStudent(st.id);
@@ -97,6 +107,30 @@ function FeesPage() {
 
   return (
     <>
+      <style>{`
+        @media screen {
+          #payment-receipt {
+            display: none;
+          }
+        }
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          #payment-receipt, #payment-receipt * {
+            visibility: visible;
+          }
+          #payment-receipt {
+            display: block;
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            padding: 28px;
+            background: white;
+            color: black;
+          }
+        }
+      `}</style>
       <PageHeader
         title="Fees"
         description="Each class fee is split into 3 terms automatically. Record payments per term."
@@ -216,7 +250,7 @@ function FeesPage() {
                         <Button size="icon" variant="ghost" onClick={() => openEditPayment(p)}>
                           <Edit3 className="h-4 w-4" />
                         </Button>
-                        <Button size="icon" variant="ghost" onClick={() => window.print()}>
+                        <Button size="icon" variant="ghost" onClick={() => printPayment(p)}>
                           <Printer className="h-4 w-4" />
                         </Button>
                         <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete this payment?")) deletePayment(p.id); }}>
@@ -274,12 +308,99 @@ function FeesPage() {
             <div className="space-y-2 sm:col-span-2"><Label>Reference (optional)</Label><Input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="e.g. MPESA QHJ123ABC" /></div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => window.print()}><Printer className="h-4 w-4" /> Print</Button>
+            {editingPaymentId && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  const payment = store.payments.find((item) => item.id === editingPaymentId);
+                  if (payment) printPayment(payment);
+                }}
+              >
+                <Printer className="h-4 w-4" /> Print
+              </Button>
+            )}
             <Button onClick={save}>{editingPaymentId ? "Save payment" : "Save payment record"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {receiptPayment && receiptStudent && receiptFee && (
+        <PaymentReceipt
+          school={store.school}
+          student={receiptStudent}
+          classNameValue={receiptClass?.name ?? "-"}
+          payment={receiptPayment}
+          amountExpected={receiptFee.expectedByTerm[receiptPayment.term] ?? 0}
+          balance={Math.max(0, receiptFee.balanceTotal)}
+        />
+      )}
     </>
+  );
+}
+
+function PaymentReceipt({
+  school,
+  student,
+  classNameValue,
+  payment,
+  amountExpected,
+  balance,
+}: {
+  school: ReturnType<typeof useStore>["school"];
+  student: ReturnType<typeof useStore>["students"][number];
+  classNameValue: string;
+  payment: Payment;
+  amountExpected: number;
+  balance: number;
+}) {
+  return (
+    <section id="payment-receipt">
+      <div style={{ display: "flex", alignItems: "center", gap: 16, borderBottom: "2px solid #111", paddingBottom: 16 }}>
+        {school?.logo ? (
+          <img src={school.logo} alt={school.name} style={{ width: 72, height: 72, objectFit: "cover" }} />
+        ) : (
+          <div style={{ width: 72, height: 72, border: "1px solid #111" }} />
+        )}
+        <div>
+          <h1 style={{ margin: 0, fontSize: 24 }}>{school?.name ?? "School"}</h1>
+          <div style={{ fontSize: 13 }}>{school?.address}</div>
+          <div style={{ fontSize: 13 }}>{school?.phone} {school?.email ? ` | ${school.email}` : ""}</div>
+        </div>
+      </div>
+
+      <h2 style={{ marginTop: 28, fontSize: 20 }}>Fee Payment Receipt</h2>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 16, fontSize: 14 }}>
+        <ReceiptLine label="Student name" value={student.name} />
+        <ReceiptLine label="Admission number" value={student.admissionNo} />
+        <ReceiptLine label="Class" value={classNameValue} />
+        <ReceiptLine label="Term" value={`Term ${payment.term}`} />
+        <ReceiptLine label="Amount expected" value={formatKES(amountExpected)} />
+        <ReceiptLine label="Amount paid" value={formatKES(payment.amount)} />
+        <ReceiptLine label="Balance" value={formatKES(balance)} />
+        <ReceiptLine label="Payment method" value={payment.method} />
+        <ReceiptLine label="Reference" value={payment.ref ?? "-"} />
+        <ReceiptLine label="Date/time paid" value={new Date(payment.date).toLocaleString()} />
+      </div>
+
+      <div style={{ marginTop: 56, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 60, fontSize: 14 }}>
+        <div>
+          <div style={{ borderTop: "1px solid #111", paddingTop: 8 }}>Received by / signature</div>
+        </div>
+        <div>
+          <div style={{ borderTop: "1px solid #111", paddingTop: 8 }}>Date printed: {new Date().toLocaleString()}</div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ReceiptLine({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{ borderBottom: "1px solid #ddd", paddingBottom: 8 }}>
+      <div style={{ fontSize: 11, textTransform: "uppercase", color: "#555" }}>{label}</div>
+      <div style={{ fontWeight: 600 }}>{value}</div>
+    </div>
   );
 }
 
