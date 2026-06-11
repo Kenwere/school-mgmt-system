@@ -1,22 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, type KeyboardEvent } from "react";
 import { PageHeader } from "@/components/page-header";
 import { PermissionGate } from "@/components/permission-gate";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Edit3, Trash2, Users, Wallet, BookOpen } from "lucide-react";
+import { Plus, Edit3, Trash2, Users, Wallet, BookOpen, X } from "lucide-react";
 import {
   addClass,
   deleteClass,
   formatKES,
   updateClass,
   useStore,
-  DEFAULT_SUBJECTS,
   type ClassRow,
 } from "@/lib/store";
 
@@ -38,8 +36,13 @@ type Form = {
   feeTerm1: string;
   feeTerm2: string;
   feeTerm3: string;
-  subjects: string;
+  subjects: string[];
 };
+
+const DEFAULT_SUBJECTS = [
+  "Mathematics", "English", "Kiswahili", "Physics",
+  "Chemistry", "Biology", "History", "Geography",
+];
 
 const blank: Form = {
   name: "",
@@ -49,7 +52,7 @@ const blank: Form = {
   feeTerm1: "0",
   feeTerm2: "0",
   feeTerm3: "0",
-  subjects: DEFAULT_SUBJECTS.join(", "),
+  subjects: [...DEFAULT_SUBJECTS],
 };
 
 function ClassesPage() {
@@ -58,8 +61,11 @@ function ClassesPage() {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<Form>(blank);
 
-  const openCreate = () => { setForm(blank); setEditing(false); setOpen(true); };
+  const [subjectInput, setSubjectInput] = useState("");
+
+  const openCreate = () => { setForm(blank); setEditing(false); setSubjectInput(""); setOpen(true); };
   const openEdit = (c: ClassRow) => {
+    setSubjectInput("");
     setForm({
       id: c.id,
       name: c.name,
@@ -69,14 +75,29 @@ function ClassesPage() {
       feeTerm1: String(c.feeTerm1),
       feeTerm2: String(c.feeTerm2),
       feeTerm3: String(c.feeTerm3),
-      subjects: c.subjects.join(", "),
+      subjects: [...c.subjects],
     });
     setEditing(true);
     setOpen(true);
   };
 
+  const addSubject = () => {
+    const s = subjectInput.trim();
+    if (s && !form.subjects.includes(s)) {
+      setForm({ ...form, subjects: [...form.subjects, s] });
+    }
+    setSubjectInput("");
+  };
+
+  const removeSubject = (s: string) => {
+    setForm({ ...form, subjects: form.subjects.filter((x) => x !== s) });
+  };
+
+  const handleSubjectKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") { e.preventDefault(); addSubject(); }
+  };
+
   const save = () => {
-    const subjects = form.subjects.split(",").map((s) => s.trim()).filter(Boolean);
     const feeTerm1 = Number(form.feeTerm1) || 0;
     const feeTerm2 = Number(form.feeTerm2) || 0;
     const feeTerm3 = Number(form.feeTerm3) || 0;
@@ -89,7 +110,7 @@ function ClassesPage() {
       feeTerm2,
       feeTerm3,
       feePerYear: feeTerm1 + feeTerm2 + feeTerm3,
-      subjects,
+      subjects: form.subjects,
     };
     if (editing && form.id) {
       updateClass(form.id, payload);
@@ -139,8 +160,33 @@ function ClassesPage() {
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <Label>Subjects (comma separated)</Label>
-                  <Textarea value={form.subjects} onChange={(e) => setForm({ ...form, subjects: e.target.value })} rows={2} />
+                  <Label>Subjects</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={subjectInput}
+                      onChange={(e) => setSubjectInput(e.target.value)}
+                      onKeyDown={handleSubjectKeyDown}
+                      placeholder="Type a subject and press Enter"
+                      className="flex-1"
+                    />
+                    <Button type="button" size="sm" variant="outline" onClick={addSubject}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {form.subjects.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {form.subjects.map((s) => (
+                        <Badge key={s} variant="secondary" className="gap-1 pr-1">
+                          {s}
+                          <button type="button" onClick={() => removeSubject(s)} className="ml-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20">
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">No subjects yet. Add at least one subject.</p>
+                  )}
                 </div>
               </div>
               <DialogFooter><Button onClick={save}>{editing ? "Save" : "Create"}</Button></DialogFooter>
@@ -171,7 +217,17 @@ function ClassesPage() {
                 <div className="flex items-center gap-2 text-muted-foreground"><Users className="h-4 w-4" />{students} students</div>
                 <div className="flex items-center gap-2 text-muted-foreground"><Wallet className="h-4 w-4" />{formatKES(c.feePerYear)} / year</div>
                 <div className="text-xs text-muted-foreground">T1 {formatKES(c.feeTerm1)} · T2 {formatKES(c.feeTerm2)} · T3 {formatKES(c.feeTerm3)}</div>
-                <div className="flex items-center gap-2 text-muted-foreground"><BookOpen className="h-4 w-4" />{c.subjects.length} subjects</div>
+                <div className="flex items-center gap-2 text-muted-foreground"><BookOpen className="h-4 w-4 shrink-0" />{c.subjects.length} subjects</div>
+                {c.subjects.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {c.subjects.slice(0, 4).map((s) => (
+                      <Badge key={s} variant="outline" className="text-[10px] px-1.5 py-0">{s}</Badge>
+                    ))}
+                    {c.subjects.length > 4 && (
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">+{c.subjects.length - 4}</Badge>
+                    )}
+                  </div>
+                )}
               </CardContent>
               <CardFooter className="flex gap-2">
                 <Button size="sm" variant="outline" onClick={() => openEdit(c)}><Edit3 className="h-4 w-4" /> Edit</Button>
