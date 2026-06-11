@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useMemo, useCallback } from "react";
-import { Download } from "lucide-react";
+import { Download, Plus, Trash2, Pencil } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { PermissionGate } from "@/components/permission-gate";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { saveTimetableEntries, useStore } from "@/lib/store";
@@ -20,7 +21,7 @@ export const Route = createFileRoute("/timetable")({
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"] as const;
 
-const TIME_SLOTS = [
+const DEFAULT_TIME_SLOTS = [
   "08:00 - 08:40",
   "08:40 - 09:20",
   "09:20 - 10:00",
@@ -38,6 +39,10 @@ function TimetablePage() {
   const store = useStore();
   const [classId, setClassId] = useState<string>("");
   const [saving, setSaving] = useState(false);
+  const [timeSlots, setTimeSlots] = useState<string[]>([...DEFAULT_TIME_SLOTS]);
+  const [newSlot, setNewSlot] = useState("");
+  const [editingSlot, setEditingSlot] = useState<string | null>(null);
+  const [editSlotValue, setEditSlotValue] = useState("");
 
   const cls = store.classes.find((c) => c.id === classId);
   const subjects = cls?.subjects ?? [];
@@ -66,7 +71,7 @@ function TimetablePage() {
   };
 
   const hasChanges = useMemo(() => {
-    for (const ts of TIME_SLOTS) {
+    for (const ts of timeSlots) {
       for (const day of DAYS) {
         const key = draftKey(ts, day);
         const draftVal = key in draft ? draft[key] : undefined;
@@ -76,12 +81,12 @@ function TimetablePage() {
       }
     }
     return false;
-  }, [draft, entrySubject]);
+  }, [draft, entrySubject, timeSlots]);
 
   const handleSave = async () => {
     if (!classId) return;
     setSaving(true);
-    const entries = TIME_SLOTS.flatMap((ts) =>
+    const entries = timeSlots.flatMap((ts) =>
       DAYS.map((day) => ({
         day,
         timeSlot: ts,
@@ -93,7 +98,35 @@ function TimetablePage() {
     setSaving(false);
   };
 
-  const isBreak = (ts: string) => ts.includes("Break") || ts.includes("Lunch");
+  const addTimeSlot = () => {
+    const s = newSlot.trim();
+    if (s && !timeSlots.includes(s)) {
+      setTimeSlots([...timeSlots, s]);
+    }
+    setNewSlot("");
+  };
+
+  const removeTimeSlot = (slot: string) => {
+    if (DEFAULT_TIME_SLOTS.includes(slot)) return;
+    setTimeSlots(timeSlots.filter((s) => s !== slot));
+  };
+
+  const startEditSlot = (slot: string) => {
+    setEditingSlot(slot);
+    setEditSlotValue(slot);
+  };
+
+  const saveEditSlot = () => {
+    if (!editingSlot) return;
+    const val = editSlotValue.trim();
+    if (val && !timeSlots.includes(val)) {
+      setTimeSlots(timeSlots.map((s) => (s === editingSlot ? val : s)));
+    }
+    setEditingSlot(null);
+    setEditSlotValue("");
+  };
+
+  const isBreak = (ts: string) => ts.toLowerCase().includes("break") || ts.toLowerCase().includes("lunch");
 
   return (
     <>
@@ -188,6 +221,49 @@ function TimetablePage() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-2 min-w-[260px]">
+                <Label>Time slots</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={newSlot}
+                    onChange={(e) => setNewSlot(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTimeSlot(); } }}
+                    placeholder="e.g. 16:00 - 16:40"
+                    className="flex-1"
+                  />
+                  <Button type="button" size="sm" variant="outline" onClick={addTimeSlot}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {timeSlots.map((slot) => (
+                    <div key={slot} className="group flex items-center gap-0.5 rounded-md border bg-background px-2 py-0.5 text-xs">
+                      {editingSlot === slot ? (
+                        <Input
+                          value={editSlotValue}
+                          onChange={(e) => setEditSlotValue(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); saveEditSlot(); } if (e.key === "Escape") { setEditingSlot(null); } }}
+                          onBlur={saveEditSlot}
+                          className="h-6 w-28 text-xs px-1"
+                          autoFocus
+                        />
+                      ) : (
+                        <span>{slot}</span>
+                      )}
+                      {!DEFAULT_TIME_SLOTS.includes(slot) && (
+                        <>
+                          <button type="button" onClick={() => startEditSlot(slot)} className="ml-0.5 rounded p-0.5 hover:bg-muted">
+                            <Pencil className="h-3 w-3" />
+                          </button>
+                          <button type="button" onClick={() => removeTimeSlot(slot)} className="rounded p-0.5 hover:bg-destructive/10 text-destructive">
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
               {hasChanges && (
                 <Button onClick={handleSave} disabled={saving}>
                   {saving ? "Saving..." : "Save changes"}
@@ -217,7 +293,7 @@ function TimetablePage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {TIME_SLOTS.map((ts) => (
+                    {timeSlots.map((ts) => (
                       <tr key={ts} className={`border-b last:border-b-0 ${isBreak(ts) ? "break-row" : ""}`}>
                         <td className={`px-3 py-2 font-medium text-foreground whitespace-nowrap text-xs ${isBreak(ts) ? "italic text-muted-foreground" : ""}`}>
                           {ts}
