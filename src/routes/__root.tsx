@@ -8,7 +8,8 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { Bell, Search } from "lucide-react";
+import { Bell, Search, Palette } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
@@ -16,8 +17,16 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import { AuthProvider, useAuth } from "@/lib/auth";
+import { getStoredTheme, setStoredTheme, applyTheme, type Theme } from "@/lib/utils";
 import appCss from "../styles.css?url";
 
 function NotFoundComponent() {
@@ -108,6 +117,21 @@ function RootShellContent() {
   const pathname = useRouterState({ select: (r) => r.location.pathname });
   const isAuthPage = pathname === "/login" || pathname === "/register";
   const showChrome = !!auth.user && !isAuthPage;
+  const [theme, setTheme] = useState<Theme>(getStoredTheme);
+
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
+
+  useEffect(() => {
+    setTheme(getStoredTheme());
+  }, []);
+
+  const handleThemeChange = (val: string) => {
+    const t = val as Theme;
+    setTheme(t);
+    setStoredTheme(t);
+  };
 
   if (!showChrome) {
     return (
@@ -136,8 +160,24 @@ function RootShellContent() {
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input placeholder="Search…" className="pl-9 h-9 bg-muted/50 border-transparent" />
             </div>
-            <div className="ml-auto flex items-center gap-2">
-              <Button variant="ghost" size="icon" className="relative">
+              <div className="ml-auto flex items-center gap-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="relative">
+                      <Palette className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuRadioGroup value={theme} onValueChange={handleThemeChange}>
+                      <DropdownMenuRadioItem value="emerald">Emerald</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="sapphire">Sapphire</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="rose">Rose</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="amber">Amber</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="violet">Violet</DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button variant="ghost" size="icon" className="relative">
                 <Bell className="h-4 w-4" />
               </Button>
               <div className="hidden sm:flex items-center gap-2 rounded-md px-2 py-1">
