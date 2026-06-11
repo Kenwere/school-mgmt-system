@@ -40,15 +40,38 @@ function StudentDetailPage() {
 
   return (
     <>
-      <PageHeader
-        title={student.name}
-        description={`${student.admissionNo} - ${fee.class?.name ?? "No class"}`}
-        actions={
-          <Button variant="outline" asChild>
-            <Link to="/students"><ArrowLeft className="h-4 w-4" /> Students</Link>
-          </Button>
+      <style>{`
+        @media print {
+          body * {
+            visibility: hidden !important;
+          }
+          #student-print-area,
+          #student-print-area * {
+            visibility: visible !important;
+          }
+          #student-print-area {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            padding: 32px 40px !important;
+            background: white !important;
+            color: black !important;
+            z-index: 9999 !important;
+          }
         }
-      />
+      `}</style>
+      <div id="student-print-area">
+        <PageHeader
+          title={student.name}
+          description={`${student.admissionNo} - ${fee.class?.name ?? "No class"}`}
+          actions={
+            <Button variant="outline" asChild>
+              <Link to="/students"><ArrowLeft className="h-4 w-4" /> Students</Link>
+            </Button>
+          }
+        />
       <div className="grid gap-4 p-6 lg:grid-cols-[320px_1fr]">
         <Card>
           <CardHeader>
@@ -119,6 +142,7 @@ function StudentDetailPage() {
             </CardContent>
           </Card>
         </div>
+      </div>
       </div>
     </>
   );

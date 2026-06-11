@@ -120,12 +120,18 @@ function FeesPage() {
             margin: 0 !important;
             padding: 0 !important;
           }
-          body > :not(#payment-receipt) {
-            display: none !important;
+          body * {
+            visibility: hidden !important;
+          }
+          #payment-receipt,
+          #payment-receipt * {
+            visibility: visible !important;
           }
           #payment-receipt {
             display: block !important;
-            position: relative !important;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
             width: 100% !important;
             min-height: 100vh !important;
             padding: 40px 48px !important;
@@ -133,6 +139,7 @@ function FeesPage() {
             color: black !important;
             font-size: 14px !important;
             line-height: 1.5 !important;
+            z-index: 9999 !important;
           }
         }
       `}</style>
