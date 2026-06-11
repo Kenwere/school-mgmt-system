@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { Lock } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { PermissionGate } from "@/components/permission-gate";
 import { Card, CardContent } from "@/components/ui/card";
@@ -29,6 +30,17 @@ function MarksPage() {
     () => store.students.filter((s) => s.classId === classId),
     [store.students, classId],
   );
+
+  const enteredSubjects = useMemo(() => {
+    if (!examId) return new Set<string>();
+    const entered = new Set<string>();
+    for (const m of store.marks) {
+      if (m.examId === examId && subjects.includes(m.subject)) {
+        entered.add(m.subject);
+      }
+    }
+    return entered;
+  }, [store.marks, examId, subjects]);
 
   const get = (studentId: string, subject: string) =>
     store.marks.find((m) => m.examId === examId && m.studentId === studentId && m.subject === subject)?.score ?? "";
@@ -86,7 +98,14 @@ function MarksPage() {
                   <TableRow>
                     <TableHead className="min-w-48">Student</TableHead>
                     {subjects.map((sub) => (
-                      <TableHead key={sub} className="text-right">{sub}</TableHead>
+                      <TableHead key={sub} className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          {sub}
+                          {enteredSubjects.has(sub) && (
+                            <Lock className="h-3 w-3 text-muted-foreground" />
+                          )}
+                        </div>
+                      </TableHead>
                     ))}
                     <TableHead className="text-right">Total</TableHead>
                     <TableHead className="text-right">Avg</TableHead>
@@ -100,18 +119,22 @@ function MarksPage() {
                     return (
                       <TableRow key={st.id}>
                         <TableCell className="font-medium">{st.name}<div className="text-xs text-muted-foreground">{st.admissionNo}</div></TableCell>
-                        {subjects.map((sub) => (
-                          <TableCell key={sub} className="text-right">
-                            <Input
-                              type="number"
-                              min={0}
-                              max={100}
-                              className="h-8 w-20 text-right tabular-nums"
-                              defaultValue={get(st.id, sub)}
-                              onBlur={(e) => onChange(st.id, sub, e.target.value)}
-                            />
-                          </TableCell>
-                        ))}
+                        {subjects.map((sub) => {
+                          const isEntered = enteredSubjects.has(sub);
+                          return (
+                            <TableCell key={sub} className="text-right">
+                              <Input
+                                type="number"
+                                min={0}
+                                max={100}
+                                className={`h-8 w-20 text-right tabular-nums ${isEntered ? "opacity-60" : ""}`}
+                                defaultValue={get(st.id, sub)}
+                                disabled={isEntered}
+                                onBlur={(e) => onChange(st.id, sub, e.target.value)}
+                              />
+                            </TableCell>
+                          );
+                        })}
                         <TableCell className="text-right tabular-nums font-medium">{total}</TableCell>
                         <TableCell className="text-right tabular-nums">{avg.toFixed(1)}</TableCell>
                       </TableRow>
@@ -122,7 +145,7 @@ function MarksPage() {
             </CardContent>
           </Card>
         )}
-        <p className="text-xs text-muted-foreground">Tip: rankings are calculated automatically on the Grades and Reports pages.</p>
+        <p className="text-xs text-muted-foreground">Tip: a subject is locked once marks are entered. Rankings are calculated automatically on the Grades and Reports pages.</p>
       </div>
     </>
   );

@@ -91,6 +91,18 @@ create table if not exists public.payments (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.timetable_entries (
+  id uuid primary key,
+  school_id text not null default 'default' references public.schools(id) on delete cascade,
+  class_id uuid not null references public.classes(id) on delete cascade,
+  day text not null check (day in ('Mon', 'Tue', 'Wed', 'Thu', 'Fri')),
+  time_slot text not null,
+  subject text not null default '',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (class_id, day, time_slot)
+);
+
 alter table public.classes add column if not exists fee_term_1 numeric not null default 0;
 alter table public.classes add column if not exists fee_term_2 numeric not null default 0;
 alter table public.classes add column if not exists fee_term_3 numeric not null default 0;
@@ -104,6 +116,7 @@ alter table public.students enable row level security;
 alter table public.exams enable row level security;
 alter table public.marks enable row level security;
 alter table public.payments enable row level security;
+alter table public.timetable_entries enable row level security;
 
 drop policy if exists "Allow school reads" on public.schools;
 create policy "Allow school reads" on public.schools for select to anon, authenticated using (true);
@@ -139,3 +152,8 @@ drop policy if exists "Allow payment reads" on public.payments;
 create policy "Allow payment reads" on public.payments for select to anon, authenticated using (true);
 drop policy if exists "Allow payment writes" on public.payments;
 create policy "Allow payment writes" on public.payments for all to anon, authenticated using (true) with check (true);
+
+drop policy if exists "Allow timetable reads" on public.timetable_entries;
+create policy "Allow timetable reads" on public.timetable_entries for select to anon, authenticated using (true);
+drop policy if exists "Allow timetable writes" on public.timetable_entries;
+create policy "Allow timetable writes" on public.timetable_entries for all to anon, authenticated using (true) with check (true);

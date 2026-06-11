@@ -75,6 +75,14 @@ export type Payment = {
   ref?: string;
 };
 
+export type TimetableEntry = {
+  id: ID;
+  classId: ID;
+  day: string;
+  timeSlot: string;
+  subject: string;
+};
+
 export type State = {
   school: School | null;
   users: User[];
@@ -83,6 +91,7 @@ export type State = {
   exams: Exam[];
   marks: Mark[];
   payments: Payment[];
+  timetableEntries: TimetableEntry[];
   currentUserId: ID | null;
 };
 
@@ -134,6 +143,7 @@ const emptyState: State = {
   exams: [],
   marks: [],
   payments: [],
+  timetableEntries: [],
   currentUserId: null,
 };
 
@@ -190,7 +200,7 @@ export function initializeStoreFromSupabase() {
   hydratePromise = (async () => {
     const db = requireSupabase();
 
-    const [schoolResult, usersResult, classesResult, studentsResult, examsResult, marksResult, paymentsResult] =
+    const [schoolResult, usersResult, classesResult, studentsResult, examsResult, marksResult, paymentsResult, timetableResult] =
       await Promise.all([
         db.from("schools").select("*").eq("id", SCHOOL_ID).maybeSingle(),
         db.from("users").select("*").order("created_at", { ascending: true }),
@@ -199,9 +209,10 @@ export function initializeStoreFromSupabase() {
         db.from("exams").select("*").order("date", { ascending: false }),
         db.from("marks").select("*").order("created_at", { ascending: true }),
         db.from("payments").select("*").order("paid_at", { ascending: false }),
+        db.from("timetable_entries").select("*").order("created_at", { ascending: true }),
       ]);
 
-    const results = [schoolResult, usersResult, classesResult, studentsResult, examsResult, marksResult, paymentsResult];
+    const results = [schoolResult, usersResult, classesResult, studentsResult, examsResult, marksResult, paymentsResult, timetableResult];
     const failed = results.find((result) => result.error);
     if (failed?.error) showSupabaseError("Loading Supabase data", failed.error);
 
@@ -277,6 +288,13 @@ export function initializeStoreFromSupabase() {
         date: row.paid_at ?? row.date,
         method: row.method,
         ref: row.ref ?? undefined,
+      })),
+      timetableEntries: (timetableResult.data ?? []).map((row) => ({
+        id: row.id,
+        classId: row.class_id,
+        day: row.day,
+        timeSlot: row.time_slot,
+        subject: row.subject,
       })),
       currentUserId: state.currentUserId,
     });
@@ -642,6 +660,63 @@ export async function updateSchool(patch: Partial<School>) {
   });
   if (error) showSupabaseError("Updating school profile", error);
   commit({ ...state, school: nextSchool }, "School profile updated");
+}
+
+// --- Timetable ---
+export async function saveTimetableEntries(classId: ID, entries: { day: string; timeSlot: string; subject: string }[]) {
+  const db = requireSupabase();
+  const existing = state.timetableEntries.filter((e) => e.classId === classId);
+  const existingIds = new Set(existing.map((e) => e.id));
+
+  const incoming = entries.map((e) => {
+    const match = existing.find((x) => x.day === e.day && x.timeSlot === e.timeSlot);
+    return {
+      id: match?.id ?? uid(),
+      classId,
+      day: e.day,
+      timeSlot: e.timeSlot,
+      subject: e.subject,
+    };
+  });
+
+  const incomingIds = new Set(incoming.map((e) => e.id));
+  const toDelete = existing.filter((e) => !incomingIds.has(e.id));
+
+  const results = await Promise.all([
+    ...(toDelete.length > 0
+      ? [db.from("timetable_entries").delete().in("id", toDelete.map((e) => e.id))]
+      : []),
+    ...incoming.map((item) =>
+      db.from("timetable_entries").upsert({
+        id: item.id,
+        school_id: SCHOOL_ID,
+        class_id: item.classId,
+        day: item.day,
+        time_slot: item.timeSlot,
+        subject: item.subject,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "class_id,day,time_slot" }),
+    ),
+  ]);
+
+  const failed = results.find((r) => r?.error);
+  if (failed?.error) showSupabaseError("Saving timetable", failed.error);
+
+  const remaining = state.timetableEntries.filter((e) => e.classId !== classId);
+  commit({
+    ...state,
+    timetableEntries: [...remaining, ...incoming],
+  }, "Timetable saved");
+}
+
+export async function deleteTimetableForClass(classId: ID) {
+  const db = requireSupabase();
+  const { error } = await db.from("timetable_entries").delete().eq("class_id", classId);
+  if (error) showSupabaseError("Deleting timetable", error);
+  commit({
+    ...state,
+    timetableEntries: state.timetableEntries.filter((e) => e.classId !== classId),
+  }, "Timetable deleted");
 }
 
 // --- Derivations ---
