@@ -57,65 +57,59 @@ function Landing() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Top utility bar */}
-      <div className="bg-foreground text-background">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-6 py-2 text-xs">
+      {/* Top bar */}
+      <div className="bg-primary/5 border-b border-primary/10">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-6 py-2 text-xs text-muted-foreground">
           <div className="flex flex-wrap items-center gap-5">
-            <span className="inline-flex items-center gap-1.5 opacity-90">
+            <span className="inline-flex items-center gap-1.5">
               <Phone className="h-3.5 w-3.5" /> +254 700 000 000
             </span>
-            <span className="hidden items-center gap-1.5 opacity-90 sm:inline-flex">
+            <span className="hidden items-center gap-1.5 sm:inline-flex">
               <Mail className="h-3.5 w-3.5" /> hello@schoolsuite.app
-            </span>
-            <span className="hidden items-center gap-3 opacity-80 md:inline-flex">
-              Follow us
-              <Facebook className="h-3.5 w-3.5" />
-              <Twitter className="h-3.5 w-3.5" />
-              <Instagram className="h-3.5 w-3.5" />
             </span>
           </div>
           <div className="flex items-center gap-4">
-            <Link to="/login" className="opacity-90 hover:opacity-100">
-              Sign in
-            </Link>
+            <Link to="/login" className="hover:text-foreground transition-colors">Sign in</Link>
             {!hasSchool && (
-              <Link to="/register" className="opacity-90 hover:opacity-100">
-                Register
-              </Link>
+              <Link to="/register" className="hover:text-foreground transition-colors">Register</Link>
             )}
           </div>
         </div>
       </div>
 
       {/* Main nav */}
-      <header className="sticky top-0 z-30 border-b bg-card/95 backdrop-blur">
+      <header className="sticky top-0 z-30 border-b bg-white/80 backdrop-blur-lg">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
+          <Link to="/" className="flex items-center gap-2.5">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-lg shadow-primary/20">
               <School className="h-5 w-5" />
             </div>
-            <span className="text-lg font-semibold tracking-tight">
+            <span className="text-lg font-bold tracking-tight">
               {schoolName}
-              <span className="ml-1 text-primary">.</span>
             </span>
           </Link>
-          <nav className="hidden items-center gap-7 text-sm font-medium md:flex">
-            <a href="#home" className="text-foreground hover:text-primary">Home</a>
-            <a href="#features" className="text-muted-foreground hover:text-primary">Features</a>
-            <a href="#modules" className="text-muted-foreground hover:text-primary">Modules</a>
-            <a href="#about" className="text-muted-foreground hover:text-primary">About</a>
-            <a href="#contact" className="text-muted-foreground hover:text-primary">Contact</a>
+          <nav className="hidden items-center gap-8 text-sm font-medium md:flex">
+            {["Home", "Features", "Modules", "About", "Contact"].map((item) => (
+              <a
+                key={item}
+                href={`#${item.toLowerCase()}`}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {item}
+              </a>
+            ))}
           </nav>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" onClick={() => router.navigate({ to: "/login" })}>
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="sm" onClick={() => router.navigate({ to: "/login" })}>
               Sign in
             </Button>
             {!hasSchool && (
               <Button
-                className="bg-accent text-accent-foreground hover:bg-accent/90"
+                size="sm"
+                className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20"
                 onClick={() => router.navigate({ to: "/register" })}
               >
-                Register your school
+                Get started
               </Button>
             )}
           </div>
@@ -123,141 +117,152 @@ function Landing() {
       </header>
 
       {/* Hero */}
-      <section id="home" className="relative">
-        <div className="relative h-[600px] w-full overflow-hidden">
+      <section id="home" className="relative overflow-hidden">
+        <div className="relative min-h-[85vh] w-full">
           <img
             src={heroImage}
-            alt="Students learning together in a bright classroom"
+            alt="Students learning together"
             width={1920}
             height={1080}
             className="absolute inset-0 h-full w-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/90 via-primary/70 to-primary/30" />
-          <div className="relative mx-auto flex h-full max-w-7xl items-center px-6">
-            <div className="max-w-2xl text-primary-foreground">
-              <span className="inline-flex items-center rounded-full border border-primary-foreground/25 bg-primary-foreground/10 px-3.5 py-1 text-xs font-medium uppercase tracking-wider backdrop-blur">
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/95 via-primary/80 to-primary/40" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_oklch(0.55_0.16_165/_0.2),_transparent_60%)]" />
+          <div className="relative mx-auto flex min-h-[85vh] max-w-7xl items-center px-6">
+            <div className="max-w-2xl">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-primary-foreground/20 bg-primary-foreground/10 px-4 py-1.5 text-xs font-medium uppercase tracking-widest backdrop-blur-sm text-primary-foreground/90">
+                <span className="h-1.5 w-1.5 rounded-full bg-accent-foreground animate-pulse" />
                 Modern school management
               </span>
-              <h1 className="mt-6 text-5xl font-semibold leading-[1.05] tracking-tight sm:text-6xl">
-                Run your school with
-                <span className="block text-accent-foreground">clarity & confidence.</span>
+              <h1 className="mt-8 text-5xl font-bold leading-[1.05] tracking-tight text-primary-foreground sm:text-7xl">
+                Run your school
+                <span className="block text-accent-foreground">with confidence.</span>
               </h1>
-              <p className="mt-6 max-w-xl text-base leading-relaxed text-primary-foreground/85 sm:text-lg">
+              <p className="mt-6 max-w-xl text-lg leading-relaxed text-primary-foreground/80 sm:text-xl">
                 Enrol students, manage classes, capture exam marks with automatic ranking,
                 and track termly fee balances — all in one calm, printable workspace.
               </p>
-              <div className="mt-9 flex flex-wrap items-center gap-3">
+              <div className="mt-10 flex flex-wrap items-center gap-4">
                 {hasSchool ? (
                   <Button
                     size="lg"
-                    className="h-12 bg-accent px-7 text-accent-foreground hover:bg-accent/90"
+                    className="h-13 bg-accent px-8 text-accent-foreground text-base hover:bg-accent/90 shadow-xl shadow-accent/25"
                     onClick={() => router.navigate({ to: "/login" })}
                   >
-                    Sign in to {schoolName} <ChevronRight className="h-4 w-4" />
+                    Sign in to {schoolName} <ChevronRight className="h-4 w-4 ml-1" />
                   </Button>
                 ) : (
                   <Button
                     size="lg"
-                    className="h-12 bg-accent px-7 text-accent-foreground hover:bg-accent/90"
+                    className="h-13 bg-accent px-8 text-accent-foreground text-base hover:bg-accent/90 shadow-xl shadow-accent/25"
                     onClick={() => router.navigate({ to: "/register" })}
                   >
-                    Get started <ChevronRight className="h-4 w-4" />
+                    Start free trial <ChevronRight className="h-4 w-4 ml-1" />
                   </Button>
                 )}
                 <Button
                   size="lg"
                   variant="outline"
-                  className="h-12 border-primary-foreground/40 bg-transparent px-7 text-primary-foreground hover:bg-primary-foreground hover:text-primary"
+                  className="h-13 border-primary-foreground/30 bg-transparent px-8 text-base text-primary-foreground hover:bg-primary-foreground hover:text-primary"
                   onClick={() => {
                     document.getElementById("features")?.scrollIntoView({ behavior: "smooth" });
                   }}
                 >
-                  Explore features
+                  See how it works
                 </Button>
+              </div>
+              <div className="mt-12 flex items-center gap-8 text-sm text-primary-foreground/60">
+                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent-foreground" /> No IT setup</div>
+                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent-foreground" /> Cloud-based</div>
+                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent-foreground" /> Free to start</div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Quick highlights */}
-      <section id="features" className="border-b bg-card">
-        <div className="mx-auto grid max-w-7xl gap-8 px-6 py-20 sm:grid-cols-3">
-          <Highlight
-            icon={Headphones}
-            title="Fast Support"
-            body="Get in touch any time — we help you set up classes, fees, and exams in minutes."
-          />
-          <Highlight
-            icon={HomeIcon}
-            title="What We Do"
-            body="A complete cockpit for admissions, exams, ranking, fees and printable reports."
-          />
-          <Highlight
-            icon={MapPin}
-            title="Where We Are"
-            body="Cloud-based and accessible from every device in your school — no install required."
-          />
+      {/* Features strip */}
+      <section id="features" className="relative -mt-16 z-10 mx-auto max-w-7xl px-6">
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="rounded-2xl border bg-card p-6 shadow-lg backdrop-blur-sm">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10 text-accent">
+              <Headphones className="h-6 w-6" />
+            </div>
+            <h3 className="mt-4 text-base font-semibold">Fast Support</h3>
+            <p className="mt-1.5 text-sm text-muted-foreground">We help you set up classes, fees, and exams in minutes.</p>
+          </div>
+          <div className="rounded-2xl border bg-card p-6 shadow-lg backdrop-blur-sm">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10 text-accent">
+              <HomeIcon className="h-6 w-6" />
+            </div>
+            <h3 className="mt-4 text-base font-semibold">All-in-One Platform</h3>
+            <p className="mt-1.5 text-sm text-muted-foreground">Admissions, exams, ranking, fees and printable reports.</p>
+          </div>
+          <div className="rounded-2xl border bg-card p-6 shadow-lg backdrop-blur-sm">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10 text-accent">
+              <MapPin className="h-6 w-6" />
+            </div>
+            <h3 className="mt-4 text-base font-semibold">Access Anywhere</h3>
+            <p className="mt-1.5 text-sm text-muted-foreground">Cloud-based and accessible from every device — no install.</p>
+          </div>
         </div>
       </section>
 
       {/* Modules grid */}
-      <section id="modules" className="bg-muted/50">
-        <div className="mx-auto max-w-7xl px-6 py-24">
+      <section id="modules" className="bg-muted/30">
+        <div className="mx-auto max-w-7xl px-6 py-28">
           <div className="mx-auto max-w-2xl text-center">
-            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">
-              Everything you need
-            </span>
-            <h2 className="mt-4 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+            <span className="text-xs font-semibold uppercase tracking-[0.25em] text-accent">Everything you need</span>
+            <h2 className="mt-4 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
               Built for administrators and teachers
             </h2>
             <p className="mt-4 text-base leading-relaxed text-muted-foreground">
-              Powerful modules that work together — from the first admission to the
-              end-of-year report card.
+              Powerful modules that work together — from the first admission to the end-of-year report card.
             </p>
           </div>
-
           <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            <FeatureCard icon={Users} title="Students & staff" body="Admissions, profiles, transfers and a clean roster." />
-            <FeatureCard icon={Award} title="Exams & ranking" body="Record marks per exam — rankings update instantly." />
-            <FeatureCard icon={Wallet} title="Termly fees" body="Class fee split across 3 terms with live balances." />
-            <FeatureCard icon={Printer} title="Printable reports" body="Report cards, fee statements, class & student lists." />
-            <FeatureCard icon={ShieldCheck} title="Role permissions" body="Admin grants teachers access to just the pages they need." />
-            <FeatureCard icon={ClipboardCheck} title="Per-term tracking" body="See paid amount and balance for each term, per student." />
+            <FeatureCard icon={Users} title="Students & Staff" body="Admissions, profiles, transfers and a clean roster." />
+            <FeatureCard icon={Award} title="Exams & Ranking" body="Record marks per exam — rankings update instantly." />
+            <FeatureCard icon={Wallet} title="Termly Fees" body="Class fee split across 3 terms with live balances." />
+            <FeatureCard icon={Printer} title="Printable Reports" body="Report cards, fee statements, class & student lists." />
+            <FeatureCard icon={ShieldCheck} title="Role Permissions" body="Admin grants teachers access to just the pages they need." />
+            <FeatureCard icon={ClipboardCheck} title="Per-Term Tracking" body="See paid amount and balance for each term, per student." />
           </div>
         </div>
       </section>
 
-      {/* About / CTA strip */}
-      <section id="about" className="bg-primary text-primary-foreground">
-        <div className="mx-auto grid max-w-7xl items-center gap-12 px-6 py-20 md:grid-cols-2">
+      {/* Stats / CTA */}
+      <section id="about" className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary/95 to-primary/90" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_oklch(0.55_0.16_165/_0.3),_transparent_50%)]" />
+        <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-6 py-24 md:grid-cols-2">
           <div>
-            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-accent-foreground/80">
+            <span className="text-xs font-semibold uppercase tracking-[0.25em] text-accent-foreground/80">
               Why schools choose us
             </span>
-            <h2 className="mt-4 text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
+            <h2 className="mt-4 text-3xl font-bold leading-tight tracking-tight text-primary-foreground sm:text-4xl">
               One calm cockpit for the whole school year.
             </h2>
-            <p className="mt-5 max-w-lg text-base leading-relaxed text-primary-foreground/75">
+            <p className="mt-5 max-w-lg text-base leading-relaxed text-primary-foreground/70">
               Replace spreadsheets with a focused workspace that keeps students,
               teachers, marks and fees in one place — and prints beautiful reports
               when you need them.
             </p>
-            <ul className="mt-7 space-y-3.5 text-sm">
+            <ul className="mt-8 space-y-4 text-sm">
               {[
                 "Set up in minutes — no IT team required",
                 "Three-term fee tracking with live balances",
                 "Auto-ranked grades per class and per exam",
                 "Permission-controlled access for teachers",
               ].map((t) => (
-                <li key={t} className="flex items-start gap-3 text-primary-foreground/90">
+                <li key={t} className="flex items-start gap-3 text-primary-foreground/85">
                   <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-accent-foreground" />
                   <span>{t}</span>
                 </li>
               ))}
             </ul>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-5">
             <Stat number="20+" label="Modules ready out of the box" />
             <Stat number="3" label="Terms tracked per academic year" />
             <Stat number="Auto" label="Ranking by exam and class" />
@@ -266,17 +271,47 @@ function Landing() {
         </div>
       </section>
 
+      {/* Testimonials */}
+      <section className="border-y bg-card">
+        <div className="mx-auto max-w-7xl px-6 py-24">
+          <div className="mx-auto max-w-2xl text-center">
+            <span className="text-xs font-semibold uppercase tracking-[0.25em] text-accent">Trusted by schools</span>
+            <h2 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">What administrators say</h2>
+          </div>
+          <div className="mt-14 grid gap-6 sm:grid-cols-3">
+            {[
+              { quote: "We went from 4 spreadsheets to one dashboard. The fee tracking alone saved us days.", author: "Jane M.", role: "Head Teacher" },
+              { quote: "Setting up exams and getting ranked reports used to take a full weekend. Now it's instant.", author: "Peter K.", role: "Deputy Head" },
+              { quote: "The printable reports are a lifesaver. Parents love the clean fee statements.", author: "Sarah W.", role: "Bursar" },
+            ].map((t) => (
+              <div key={t.author} className="rounded-2xl border bg-card/50 p-6">
+                <div className="flex gap-1 text-accent mb-3">
+                  {[...Array(5)].map((_, i) => (
+                    <span key={i} className="h-4 w-4 rounded-full bg-accent/20 flex items-center justify-center text-[10px] font-bold text-accent">★</span>
+                  ))}
+                </div>
+                <p className="text-sm leading-relaxed text-muted-foreground italic">"{t.quote}"</p>
+                <div className="mt-4 pt-4 border-t">
+                  <p className="text-sm font-semibold">{t.author}</p>
+                  <p className="text-xs text-muted-foreground">{t.role}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Contact / Footer */}
-      <footer id="contact" className="border-t bg-card">
-        <div className="mx-auto grid max-w-7xl gap-8 px-6 py-12 sm:grid-cols-2 md:grid-cols-4">
+      <footer id="contact" className="bg-card">
+        <div className="mx-auto grid max-w-7xl gap-10 px-6 py-16 sm:grid-cols-2 md:grid-cols-4">
           <div>
-            <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground">
                 <School className="h-5 w-5" />
               </div>
-              <span className="font-semibold tracking-tight">{schoolName}</span>
+              <span className="text-lg font-bold tracking-tight">{schoolName}</span>
             </div>
-            <p className="mt-3 text-sm text-muted-foreground">
+            <p className="mt-4 text-sm text-muted-foreground leading-relaxed">
               Modern school management for forward-thinking schools.
             </p>
           </div>
@@ -284,22 +319,22 @@ function Landing() {
           <FooterCol title="Company" links={["About", "Contact", "Privacy", "Terms"]} />
           <div>
             <h4 className="text-sm font-semibold">Get in touch</h4>
-            <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-              <li className="flex items-center gap-2"><Phone className="h-4 w-4" /> +254 700 000 000</li>
-              <li className="flex items-center gap-2"><Mail className="h-4 w-4" /> hello@schoolsuite.app</li>
-              <li className="flex items-center gap-2"><MapPin className="h-4 w-4" /> Nairobi, Kenya</li>
+            <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
+              <li className="flex items-center gap-2"><Phone className="h-4 w-4 text-accent" /> +254 700 000 000</li>
+              <li className="flex items-center gap-2"><Mail className="h-4 w-4 text-accent" /> hello@schoolsuite.app</li>
+              <li className="flex items-center gap-2"><MapPin className="h-4 w-4 text-accent" /> Nairobi, Kenya</li>
             </ul>
           </div>
         </div>
         <div className="border-t">
-          <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-2 px-6 py-5 sm:flex-row sm:items-center">
+          <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-2 px-6 py-6 sm:flex-row sm:items-center">
             <p className="text-xs text-muted-foreground">
               © {new Date().getFullYear()} {schoolName}. All rights reserved.
             </p>
-            <div className="flex gap-4 text-xs">
-              <Link to="/login" className="text-muted-foreground hover:text-foreground">Sign in</Link>
+            <div className="flex gap-5 text-xs">
+              <Link to="/login" className="text-muted-foreground hover:text-foreground transition-colors">Sign in</Link>
               {!hasSchool && (
-                <Link to="/register" className="text-muted-foreground hover:text-foreground">Register</Link>
+                <Link to="/register" className="text-muted-foreground hover:text-foreground transition-colors">Register</Link>
               )}
             </div>
           </div>
@@ -309,24 +344,12 @@ function Landing() {
   );
 }
 
-function Highlight({ icon: Icon, title, body }: { icon: any; title: string; body: string }) {
-  return (
-    <div className="flex flex-col items-center text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-accent/10 text-accent ring-1 ring-accent/20">
-        <Icon className="h-6 w-6" />
-      </div>
-      <h3 className="mt-5 text-lg font-semibold tracking-tight text-foreground">{title}</h3>
-      <p className="mt-2 max-w-xs text-sm leading-relaxed text-muted-foreground">{body}</p>
-    </div>
-  );
-}
-
 function FeatureCard({ icon: Icon, title, body }: { icon: any; title: string; body: string }) {
   return (
-    <Card className="group border-border/60 bg-card transition-all hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-lg">
+    <Card className="group border-border/60 bg-card transition-all duration-300 hover:-translate-y-1 hover:border-accent/30 hover:shadow-xl hover:shadow-accent/5">
       <CardContent className="p-6">
-        <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-accent/10 text-accent transition-colors group-hover:bg-accent group-hover:text-accent-foreground">
-          <Icon className="h-5 w-5" />
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10 text-accent transition-all duration-300 group-hover:bg-accent group-hover:text-accent-foreground group-hover:shadow-lg group-hover:shadow-accent/20">
+          <Icon className="h-6 w-6" />
         </div>
         <h3 className="mt-5 text-base font-semibold tracking-tight text-foreground">{title}</h3>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>
@@ -337,8 +360,8 @@ function FeatureCard({ icon: Icon, title, body }: { icon: any; title: string; bo
 
 function Stat({ number, label }: { number: string; label: string }) {
   return (
-    <div className="rounded-xl border border-primary-foreground/15 bg-primary-foreground/5 p-6 backdrop-blur-sm">
-      <div className="text-3xl font-semibold tracking-tight text-accent-foreground">{number}</div>
+    <div className="rounded-2xl border border-primary-foreground/15 bg-primary-foreground/5 p-6 backdrop-blur-sm transition-all hover:bg-primary-foreground/10 hover:scale-[1.02]">
+      <div className="text-3xl font-bold tracking-tight text-accent-foreground">{number}</div>
       <div className="mt-2 text-sm leading-relaxed text-primary-foreground/70">{label}</div>
     </div>
   );
@@ -347,10 +370,10 @@ function Stat({ number, label }: { number: string; label: string }) {
 function FooterCol({ title, links }: { title: string; links: string[] }) {
   return (
     <div>
-      <h4 className="text-sm font-semibold tracking-tight text-foreground">{title}</h4>
-      <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+      <h4 className="text-sm font-semibold">{title}</h4>
+      <ul className="mt-4 space-y-2.5 text-sm text-muted-foreground">
         {links.map((l) => (
-          <li key={l}><a href="#" className="hover:text-accent">{l}</a></li>
+          <li key={l}><a href="#" className="hover:text-foreground transition-colors">{l}</a></li>
         ))}
       </ul>
     </div>

@@ -114,20 +114,25 @@ function FeesPage() {
           }
         }
         @media print {
-          body * {
-            visibility: hidden;
+          html, body {
+            height: auto !important;
+            overflow: visible !important;
+            margin: 0 !important;
+            padding: 0 !important;
           }
-          #payment-receipt, #payment-receipt * {
-            visibility: visible;
+          body > :not(#payment-receipt) {
+            display: none !important;
           }
           #payment-receipt {
-            display: block;
-            position: absolute;
-            inset: 0;
-            width: 100%;
-            padding: 28px;
-            background: white;
-            color: black;
+            display: block !important;
+            position: relative !important;
+            width: 100% !important;
+            min-height: 100vh !important;
+            padding: 40px 48px !important;
+            background: white !important;
+            color: black !important;
+            font-size: 14px !important;
+            line-height: 1.5 !important;
           }
         }
       `}</style>
@@ -355,22 +360,25 @@ function PaymentReceipt({
 }) {
   return (
     <section id="payment-receipt">
-      <div style={{ display: "flex", alignItems: "center", gap: 16, borderBottom: "2px solid #111", paddingBottom: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 20, borderBottom: "2px solid #111", paddingBottom: 20, marginBottom: 8 }}>
         {school?.logo ? (
-          <img src={school.logo} alt={school.name} style={{ width: 72, height: 72, objectFit: "cover" }} />
+          <img src={school.logo} alt={school.name} style={{ width: 80, height: 80, objectFit: "cover", borderRadius: 4 }} />
         ) : (
-          <div style={{ width: 72, height: 72, border: "1px solid #111" }} />
+          <div style={{ width: 80, height: 80, border: "1px solid #ccc", borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#999" }}>Logo</div>
         )}
         <div>
-          <h1 style={{ margin: 0, fontSize: 24 }}>{school?.name ?? "School"}</h1>
-          <div style={{ fontSize: 13 }}>{school?.address}</div>
-          <div style={{ fontSize: 13 }}>{school?.phone} {school?.email ? ` | ${school.email}` : ""}</div>
+          <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700 }}>{school?.name ?? "School"}</h1>
+          <div style={{ fontSize: 13, color: "#555", marginTop: 2 }}>{school?.address}</div>
+          <div style={{ fontSize: 13, color: "#555" }}>{school?.phone}{school?.email ? ` | ${school.email}` : ""}</div>
         </div>
       </div>
 
-      <h2 style={{ marginTop: 28, fontSize: 20 }}>Fee Payment Receipt</h2>
+      <div style={{ textAlign: "center", marginTop: 24, marginBottom: 24 }}>
+        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>Fee Payment Receipt</h2>
+        <div style={{ fontSize: 12, color: "#888", marginTop: 4 }}>Receipt #{payment.id.slice(0, 8).toUpperCase()}</div>
+      </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 16, fontSize: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 20, fontSize: 14 }}>
         <ReceiptLine label="Student name" value={student.name} />
         <ReceiptLine label="Admission number" value={student.admissionNo} />
         <ReceiptLine label="Class" value={classNameValue} />
@@ -380,16 +388,20 @@ function PaymentReceipt({
         <ReceiptLine label="Balance" value={formatKES(balance)} />
         <ReceiptLine label="Payment method" value={payment.method} />
         <ReceiptLine label="Reference" value={payment.ref ?? "-"} />
-        <ReceiptLine label="Date/time paid" value={new Date(payment.date).toLocaleString()} />
+        <ReceiptLine label="Date paid" value={new Date(payment.date).toLocaleString()} />
       </div>
 
-      <div style={{ marginTop: 56, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 60, fontSize: 14 }}>
+      <div style={{ marginTop: 48, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 60, fontSize: 14 }}>
         <div>
-          <div style={{ borderTop: "1px solid #111", paddingTop: 8 }}>Received by / signature</div>
+          <div style={{ borderTop: "1.5px solid #111", paddingTop: 10 }}>Received by / Signature</div>
         </div>
         <div>
-          <div style={{ borderTop: "1px solid #111", paddingTop: 8 }}>Date printed: {new Date().toLocaleString()}</div>
+          <div style={{ borderTop: "1.5px solid #111", paddingTop: 10 }}>Date printed: {new Date().toLocaleString()}</div>
         </div>
+      </div>
+
+      <div style={{ marginTop: 32, textAlign: "center", fontSize: 11, color: "#999", borderTop: "1px solid #ddd", paddingTop: 16 }}>
+        This is a computer-generated receipt. No signature is required.
       </div>
     </section>
   );
