@@ -1,11 +1,13 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
+import { useMemo } from "react";
 import { ArrowLeft, Printer } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { PermissionGate } from "@/components/permission-gate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { feeStatusForStudent, formatKES, useStore, type Term } from "@/lib/store";
 
 export const Route = createFileRoute("/student/$studentId")({
@@ -37,6 +39,23 @@ function StudentDetailPage() {
 
   const expectedFor = (term: Term) => fee.expectedByTerm[term] ?? 0;
   const paidFor = (term: Term) => payments.filter((p) => p.term === term).reduce((sum, p) => sum + p.amount, 0);
+
+  const examProgress = useMemo(() => {
+    const sorted = [...store.exams].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    return sorted.map((e) => {
+      const marks = store.marks.filter((m) => m.examId === e.id && m.studentId === studentId);
+      const total = marks.reduce((s, m) => s + m.score, 0);
+      const avg = marks.length ? total / marks.length : 0;
+      const maxPossible = marks.length * 100;
+      return {
+        name: `${e.name} (T${e.term} ${e.year})`,
+        total,
+        average: Math.round(avg * 10) / 10,
+        percentage: maxPossible > 0 ? Math.round((total / maxPossible) * 100) : 0,
+        subjects: marks.length,
+      };
+    });
+  }, [store.exams, store.marks, studentId]);
 
   return (
     <>
@@ -141,6 +160,26 @@ function StudentDetailPage() {
               </Table>
             </CardContent>
           </Card>
+
+          {examProgress.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Exam Progress</CardTitle>
+                <CardDescription>Performance across exams from first to last</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={examProgress}>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.4} />
+                    <XAxis dataKey="name" className="text-xs" tick={{ fontSize: 11 }} />
+                    <YAxis className="text-xs" domain={[0, 100]} />
+                    <Tooltip />
+                    <Bar dataKey="percentage" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Score %" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
       </div>

@@ -17,6 +17,7 @@ import { Route as StaffRouteImport } from './routes/staff'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as RankingRouteImport } from './routes/ranking'
 import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as MarksRouteImport } from './routes/marks'
 import { Route as LoginRouteImport } from './routes/login'
@@ -69,6 +70,11 @@ const ReportsRoute = ReportsRouteImport.update({
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RankingRoute = RankingRouteImport.update({
+  id: '/ranking',
+  path: '/ranking',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MessagesRoute = MessagesRouteImport.update({
@@ -150,6 +156,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/marks': typeof MarksRoute
   '/messages': typeof MessagesRoute
+  '/ranking': typeof RankingRoute
   '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
@@ -173,6 +180,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/marks': typeof MarksRoute
   '/messages': typeof MessagesRoute
+  '/ranking': typeof RankingRoute
   '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
@@ -197,6 +205,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/marks': typeof MarksRoute
   '/messages': typeof MessagesRoute
+  '/ranking': typeof RankingRoute
   '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
@@ -222,6 +231,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/marks'
     | '/messages'
+    | '/ranking'
     | '/register'
     | '/reports'
     | '/settings'
@@ -245,6 +255,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/marks'
     | '/messages'
+    | '/ranking'
     | '/register'
     | '/reports'
     | '/settings'
@@ -268,6 +279,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/marks'
     | '/messages'
+    | '/ranking'
     | '/register'
     | '/reports'
     | '/settings'
@@ -292,6 +304,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   MarksRoute: typeof MarksRoute
   MessagesRoute: typeof MessagesRoute
+  RankingRoute: typeof RankingRoute
   RegisterRoute: typeof RegisterRoute
   ReportsRoute: typeof ReportsRoute
   SettingsRoute: typeof SettingsRoute
@@ -359,6 +372,13 @@ declare module '@tanstack/react-router' {
       path: '/register'
       fullPath: '/register'
       preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ranking': {
+      id: '/ranking'
+      path: '/ranking'
+      fullPath: '/ranking'
+      preLoaderRoute: typeof RankingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/messages': {
@@ -468,6 +488,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   MarksRoute: MarksRoute,
   MessagesRoute: MessagesRoute,
+  RankingRoute: RankingRoute,
   RegisterRoute: RegisterRoute,
   ReportsRoute: ReportsRoute,
   SettingsRoute: SettingsRoute,

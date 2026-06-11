@@ -79,7 +79,7 @@ function MarksPage() {
         ) : students.length === 0 ? (
           <Card><CardContent className="p-8 text-center text-sm text-muted-foreground">No students in this class.</CardContent></Card>
         ) : (
-          <Card>
+          <Card key={examId + classId}>
             <CardContent className="p-0 overflow-x-auto">
               <Table>
                 <TableHeader>

@@ -106,6 +106,7 @@ export const TEACHER_PERMISSION_OPTIONS: { path: string; label: string }[] = [
   { path: "/grades", label: "Grades & ranking" },
   { path: "/fees", label: "Fees" },
   { path: "/reports", label: "Reports" },
+  { path: "/ranking", label: "Ranking" },
   { path: "/attendance", label: "Attendance" },
   { path: "/timetable", label: "Timetable" },
   { path: "/announcements", label: "Announcements" },
@@ -120,6 +121,7 @@ const DEFAULT_TEACHER_PERMISSIONS = [
   "/marks",
   "/grades",
   "/reports",
+  "/ranking",
 ];
 
 const SCHOOL_ID = "default";
