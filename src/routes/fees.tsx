@@ -368,10 +368,10 @@ function PaymentReceipt({
   return (
     <section id="payment-receipt">
       <div style={{ display: "flex", alignItems: "center", gap: 20, borderBottom: "2px solid #111", paddingBottom: 20, marginBottom: 8 }}>
-        {school?.logo ? (
-          <img src={school.logo} alt={school.name} style={{ width: 80, height: 80, objectFit: "cover", borderRadius: 4 }} />
+        {student.image ? (
+          <img src={student.image} alt={student.name} style={{ width: 80, height: 80, objectFit: "cover", borderRadius: 4 }} />
         ) : (
-          <div style={{ width: 80, height: 80, border: "1px solid #ccc", borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#999" }}>Logo</div>
+          <div style={{ width: 80, height: 80, border: "1px solid #ccc", borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#999" }}>No photo</div>
         )}
         <div>
           <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700 }}>{school?.name ?? "School"}</h1>

@@ -36,6 +36,20 @@ function GradesPage() {
 
   return (
     <>
+      <style>{`
+        @media print {
+          .grades-filters {
+            display: none !important;
+          }
+          .grades-table-card {
+            box-shadow: none !important;
+            border: none !important;
+          }
+          .grades-table-card > div {
+            padding: 0 !important;
+          }
+        }
+      `}</style>
       <PageHeader
         title="Grades & ranking"
         description="Auto-ranked from marks recorded against each exam."
@@ -46,7 +60,7 @@ function GradesPage() {
         }
       />
       <div className="space-y-4 p-6">
-        <Card>
+        <Card className="grades-filters">
           <CardContent className="grid gap-4 p-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Exam</Label>
@@ -74,7 +88,7 @@ function GradesPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="grades-table-card">
           <CardContent className="p-0">
             <Table>
               <TableHeader>

@@ -79,6 +79,71 @@ function StudentDetailPage() {
             color: black !important;
             z-index: 9999 !important;
           }
+          #student-print-area .print\\:hidden {
+            display: none !important;
+          }
+          #student-print-area .print-card {
+            box-shadow: none !important;
+            border: none !important;
+            background: transparent !important;
+          }
+          #student-print-area .print-card > div {
+            padding: 0 !important;
+          }
+          #student-print-area .print-summary-grid {
+            display: flex !important;
+            gap: 24px !important;
+            margin-bottom: 24px !important;
+          }
+          #student-print-area .print-summary-item {
+            border: none !important;
+            box-shadow: none !important;
+            background: transparent !important;
+            padding: 0 !important;
+          }
+          #student-print-area .print-summary-item > div {
+            padding: 0 !important;
+          }
+          #student-print-area .print-summary-item h3 {
+            font-size: 11px !important;
+            text-transform: uppercase !important;
+            color: #666 !important;
+            margin: 0 0 2px !important;
+          }
+          #student-print-area .print-summary-item p {
+            margin: 0 !important;
+            font-size: 18px !important;
+          }
+          #student-print-area .print-table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            margin-top: 12px !important;
+          }
+          #student-print-area .print-table th {
+            text-align: left !important;
+            font-size: 11px !important;
+            text-transform: uppercase !important;
+            color: #666 !important;
+            border-bottom: 2px solid #111 !important;
+            padding: 6px 8px !important;
+          }
+          #student-print-area .print-table th.right {
+            text-align: right !important;
+          }
+          #student-print-area .print-table td {
+            padding: 6px 8px !important;
+            border-bottom: 1px solid #ddd !important;
+            font-size: 13px !important;
+          }
+          #student-print-area .print-table td.right {
+            text-align: right !important;
+          }
+          .print-btn-hide {
+            display: none !important;
+          }
+          #student-print-area .print-hide {
+            display: none !important;
+          }
         }
       `}</style>
       <div id="student-print-area">
@@ -86,13 +151,13 @@ function StudentDetailPage() {
           title={student.name}
           description={`${student.admissionNo} - ${fee.class?.name ?? "No class"}`}
           actions={
-            <Button variant="outline" asChild>
+              <Button variant="outline" className="print-btn-hide" asChild>
               <Link to="/students"><ArrowLeft className="h-4 w-4" /> Students</Link>
             </Button>
           }
         />
       <div className="grid gap-4 p-6 lg:grid-cols-[320px_1fr]">
-        <Card>
+        <Card className="print-card">
           <CardHeader>
             <CardTitle className="text-base">Student Information</CardTitle>
           </CardHeader>
@@ -116,20 +181,20 @@ function StudentDetailPage() {
         </Card>
 
         <div className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-4">
-            <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Expected</CardTitle><p className="text-2xl font-semibold">{formatKES(fee.yearly)}</p></CardHeader></Card>
-            <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Paid</CardTitle><p className="text-2xl font-semibold text-success">{formatKES(fee.paidTotal)}</p></CardHeader></Card>
-            <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Balance</CardTitle><p className="text-2xl font-semibold text-destructive">{formatKES(Math.max(0, fee.balanceTotal))}</p></CardHeader></Card>
-            <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Status</CardTitle><Badge variant="outline">{fee.balanceTotal <= 0 ? "Cleared" : "Owing"}</Badge></CardHeader></Card>
+          <div className="grid gap-4 sm:grid-cols-4 print-summary-grid">
+            <Card className="print-summary-item"><CardHeader className="pb-2"><CardTitle className="text-sm">Expected</CardTitle><p className="text-2xl font-semibold">{formatKES(fee.yearly)}</p></CardHeader></Card>
+            <Card className="print-summary-item"><CardHeader className="pb-2"><CardTitle className="text-sm">Paid</CardTitle><p className="text-2xl font-semibold text-success">{formatKES(fee.paidTotal)}</p></CardHeader></Card>
+            <Card className="print-summary-item"><CardHeader className="pb-2"><CardTitle className="text-sm">Balance</CardTitle><p className="text-2xl font-semibold text-destructive">{formatKES(Math.max(0, fee.balanceTotal))}</p></CardHeader></Card>
+            <Card className="print-summary-item"><CardHeader className="pb-2"><CardTitle className="text-sm">Status</CardTitle><Badge variant="outline">{fee.balanceTotal <= 0 ? "Cleared" : "Owing"}</Badge></CardHeader></Card>
           </div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+          <Card className="print-card">
+            <CardHeader className="flex flex-row items-center justify-between print-card">
               <CardTitle className="text-base">Fee Record</CardTitle>
-              <Button variant="outline" size="sm" onClick={() => window.print()}><Printer className="h-4 w-4" /> Print</Button>
+              <Button variant="outline" size="sm" className="print-btn-hide" onClick={() => window.print()}><Printer className="h-4 w-4" /> Print</Button>
             </CardHeader>
             <CardContent className="p-0">
-              <Table>
+              <Table className="print-table">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Term</TableHead>
@@ -162,7 +227,7 @@ function StudentDetailPage() {
           </Card>
 
           {examProgress.length > 0 && (
-            <Card>
+            <Card className="print-hide">
               <CardHeader>
                 <CardTitle className="text-base">Exam Progress</CardTitle>
                 <CardDescription>Performance across exams from first to last</CardDescription>
@@ -178,9 +243,9 @@ function StudentDetailPage() {
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" opacity={0.4} />
                       <XAxis dataKey="name" className="text-xs" tick={{ fontSize: 11 }} />
-                      <YAxis className="text-xs" domain={[0, 100]} />
+                      <YAxis className="text-xs" />
                       <Tooltip />
-                      <Bar dataKey="percentage" fill="url(#examGradient)" radius={[4, 4, 0, 0]} name="Score %" />
+                      <Bar dataKey="total" fill="url(#examGradient)" radius={[4, 4, 0, 0]} name="Total marks" />
                     </BarChart>
                   </ResponsiveContainer>
               </CardContent>
