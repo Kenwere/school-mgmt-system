@@ -10,7 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TransportRouteImport } from './routes/transport'
-import { Route as PromotionRouteImport } from './routes/promotion'
 import { Route as TimetableRouteImport } from './routes/timetable'
 import { Route as TeachersRouteImport } from './routes/teachers'
 import { Route as StudentsRouteImport } from './routes/students'
@@ -19,6 +18,7 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as RankingRouteImport } from './routes/ranking'
+import { Route as PromotionRouteImport } from './routes/promotion'
 import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as MarksRouteImport } from './routes/marks'
 import { Route as LoginRouteImport } from './routes/login'
@@ -33,11 +33,6 @@ import { Route as AnnouncementsRouteImport } from './routes/announcements'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as StudentStudentIdRouteImport } from './routes/student.$studentId'
 
-const PromotionRoute = PromotionRouteImport.update({
-  id: '/promotion',
-  path: '/promotion',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const TransportRoute = TransportRouteImport.update({
   id: '/transport',
   path: '/transport',
@@ -81,6 +76,11 @@ const RegisterRoute = RegisterRouteImport.update({
 const RankingRoute = RankingRouteImport.update({
   id: '/ranking',
   path: '/ranking',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PromotionRoute = PromotionRouteImport.update({
+  id: '/promotion',
+  path: '/promotion',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MessagesRoute = MessagesRouteImport.update({
@@ -150,7 +150,6 @@ const StudentStudentIdRoute = StudentStudentIdRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/promotion': typeof PromotionRoute
   '/': typeof IndexRoute
   '/announcements': typeof AnnouncementsRoute
   '/attendance': typeof AttendanceRoute
@@ -215,31 +214,6 @@ export interface FileRoutesById {
   '/marks': typeof MarksRoute
   '/messages': typeof MessagesRoute
   '/promotion': typeof PromotionRoute
-  '/ranking': typeof RankingRoute
-  '/register': typeof RegisterRoute
-  '/reports': typeof ReportsRoute
-  '/settings': typeof SettingsRoute
-  '/staff': typeof StaffRoute
-  '/students': typeof StudentsRoute
-  '/teachers': typeof TeachersRoute
-  '/timetable': typeof TimetableRoute
-  '/transport': typeof TransportRoute
-  '/student/$studentId': typeof StudentStudentIdRoute
-}
-export interface FileRouteTypes {
-  __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/announcements': typeof AnnouncementsRoute
-  '/attendance': typeof AttendanceRoute
-  '/classes': typeof ClassesRoute
-  '/exams': typeof ExamsRoute
-  '/fees': typeof FeesRoute
-  '/grades': typeof GradesRoute
-  '/hostel': typeof HostelRoute
-  '/library': typeof LibraryRoute
-  '/login': typeof LoginRoute
-  '/marks': typeof MarksRoute
-  '/messages': typeof MessagesRoute
   '/ranking': typeof RankingRoute
   '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
@@ -420,18 +394,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RankingRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/messages': {
-      id: '/messages'
-      path: '/messages'
-      fullPath: '/messages'
-      preLoaderRoute: typeof MessagesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/promotion': {
       id: '/promotion'
       path: '/promotion'
       fullPath: '/promotion'
       preLoaderRoute: typeof PromotionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/messages': {
+      id: '/messages'
+      path: '/messages'
+      fullPath: '/messages'
+      preLoaderRoute: typeof MessagesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/marks': {

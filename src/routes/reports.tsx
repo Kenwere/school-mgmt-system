@@ -216,7 +216,7 @@ function FeeStatements({ school }: { school: any }) {
                 <TableCell className="text-right tabular-nums">{formatKES(f.byTerm[2])}</TableCell>
                 <TableCell className="text-right tabular-nums">{formatKES(f.byTerm[3])}</TableCell>
                 <TableCell className="text-right tabular-nums">{formatKES(f.paidTotal)}</TableCell>
-                <TableCell className="text-right tabular-nums">{f.balanceTotal <= 0 ? <Badge variant="outline" className="bg-success/15 text-success border-success/30">Cleared</Badge> : <span className="text-destructive">{formatKES(f.balanceTotal)}</span>}</TableCell>
+                <TableCell className="text-right tabular-nums">{f.balanceCredit > 0 ? <Badge variant="outline" className="bg-success/15 text-success border-success/30">Credit {formatKES(f.balanceCredit)}</Badge> : f.balanceOwing > 0 ? <span className="text-destructive">{formatKES(f.balanceOwing)}</span> : <Badge variant="outline" className="bg-success/15 text-success border-success/30">Cleared</Badge>}</TableCell>
               </TableRow>
             ))}
           </TableBody>

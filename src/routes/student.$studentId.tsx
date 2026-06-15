@@ -39,8 +39,7 @@ function StudentDetailPage() {
 
   const expectedFor = (term: Term) => fee.expectedByTerm[term] ?? 0;
   const paidFor = (term: Term) => payments.filter((p) => p.term === term).reduce((sum, p) => sum + p.amount, 0);
-  const balance = Math.max(0, fee.balanceTotal);
-  const isCleared = balance <= 0;
+  const isCleared = fee.balanceOwing <= 0;
 
   const examProgress = useMemo(() => {
     const sorted = [...store.exams].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -136,8 +135,8 @@ function StudentDetailPage() {
           </div>
 
           {/* Quick stats */}
-          <div className="grid gap-4 sm:grid-cols-4">
-            <Card>
+          <div className="flex flex-wrap gap-4">
+            <Card className="flex-1 min-w-[180px]">
               <CardContent className="flex items-center gap-4 p-5">
                 <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0">
                   <Wallet className="h-5 w-5" />
@@ -148,7 +147,7 @@ function StudentDetailPage() {
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="flex-1 min-w-[180px]">
               <CardContent className="flex items-center gap-4 p-5">
                 <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-success/10 text-success shrink-0">
                   <TrendingUp className="h-5 w-5" />
@@ -159,30 +158,58 @@ function StudentDetailPage() {
                 </div>
               </CardContent>
             </Card>
-            <Card>
-              <CardContent className="flex items-center gap-4 p-5">
-                <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-destructive/10 text-destructive shrink-0">
-                  <AlertCircle className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Balance</p>
-                  <p className="text-lg font-bold text-destructive">{formatKES(balance)}</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="flex items-center gap-4 p-5">
-                <div className={`flex h-11 w-11 items-center justify-center rounded-lg shrink-0 ${isCleared ? "bg-success/10 text-success" : "bg-warning/10 text-warning-foreground"}`}>
-                  {isCleared ? <CheckCircle2 className="h-5 w-5" /> : <AlertCircle className="h-5 w-5" />}
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Status</p>
-                  <p className={`text-lg font-bold ${isCleared ? "text-success" : "text-warning-foreground"}`}>
-                    {isCleared ? "Cleared" : "Owing"}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+            {fee.balanceOwing > 0 && (
+              <Card className="flex-1 min-w-[180px]">
+                <CardContent className="flex items-center gap-4 p-5">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-destructive/10 text-destructive shrink-0">
+                    <AlertCircle className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Balance owing</p>
+                    <p className="text-lg font-bold text-destructive">{formatKES(fee.balanceOwing)}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            {fee.balanceCredit > 0 && (
+              <Card className="flex-1 min-w-[180px]">
+                <CardContent className="flex items-center gap-4 p-5">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-success/10 text-success shrink-0">
+                    <Wallet className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Credit / Excess</p>
+                    <p className="text-lg font-bold text-success">{formatKES(fee.balanceCredit)}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            {fee.balanceOwing <= 0 && fee.balanceCredit <= 0 && (
+              <Card className="flex-1 min-w-[180px]">
+                <CardContent className="flex items-center gap-4 p-5">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-success/10 text-success shrink-0">
+                    <CheckCircle2 className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Balance</p>
+                    <p className="text-lg font-bold text-success">Cleared</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            {fee.carriedForward > 0 && (
+              <Card className="flex-1 min-w-[180px]">
+                <CardContent className="flex items-center gap-4 p-5">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-warning/10 text-warning-foreground shrink-0">
+                    <TrendingUp className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Carried forward</p>
+                    <p className="text-lg font-bold text-warning-foreground">{formatKES(fee.carriedForward)}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Details + Fee record */}
@@ -253,8 +280,20 @@ function StudentDetailPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {payments.length === 0 && (
+                    {fee.carriedForward > 0 && (
+                      <TableRow className="bg-warning/5">
+                        <TableCell><Badge variant="outline" className="border-warning/30 text-warning-foreground">Carried forward</Badge></TableCell>
+                        <TableCell className="text-right tabular-nums font-medium text-warning-foreground">{formatKES(fee.carriedForward)}</TableCell>
+                        <TableCell className="text-right tabular-nums">—</TableCell>
+                        <TableCell className="text-right tabular-nums"><span className="text-warning-foreground font-medium">{formatKES(fee.carriedForward)}</span></TableCell>
+                        <TableCell className="text-muted-foreground">From previous year</TableCell>
+                      </TableRow>
+                    )}
+                    {payments.length === 0 && !fee.carriedForward && (
                       <TableRow><TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground">No fee payments recorded.</TableCell></TableRow>
+                    )}
+                    {payments.length === 0 && fee.carriedForward > 0 && (
+                      <TableRow><TableCell colSpan={5} className="py-4 text-center text-sm text-muted-foreground">No payments this year yet.</TableCell></TableRow>
                     )}
                     {payments.map((payment) => {
                       const expected = expectedFor(payment.term);

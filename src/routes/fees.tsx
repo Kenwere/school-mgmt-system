@@ -175,7 +175,7 @@ function FeesPage() {
         <div className="grid gap-4 sm:grid-cols-3">
           <Card><CardHeader className="pb-2"><CardDescription>Expected</CardDescription><CardTitle className="text-2xl">{formatKES(totals.expected)}</CardTitle></CardHeader></Card>
           <Card><CardHeader className="pb-2"><CardDescription>Collected</CardDescription><CardTitle className="text-2xl text-success">{formatKES(totals.paid)}</CardTitle></CardHeader></Card>
-          <Card><CardHeader className="pb-2"><CardDescription>Outstanding</CardDescription><CardTitle className="text-2xl text-destructive">{formatKES(Math.max(0, totals.expected - totals.paid))}</CardTitle></CardHeader></Card>
+          <Card><CardHeader className="pb-2"><CardDescription>Balance owing</CardDescription><CardTitle className="text-2xl text-destructive">{formatKES(Math.max(0, totals.expected - totals.paid))}</CardTitle></CardHeader></Card>
         </div>
         )}
 
@@ -205,7 +205,6 @@ function FeesPage() {
                 {students.map((st) => {
                   const f = feeStatusForStudent(st.id);
                   if (!f) return null;
-                  const balance = f.balanceTotal;
                   return (
                     <TableRow key={st.id}>
                       <TableCell className="font-medium">{st.name}<div className="text-xs text-muted-foreground">{st.admissionNo}</div></TableCell>
@@ -216,10 +215,12 @@ function FeesPage() {
                       <TableCell className="text-right tabular-nums">{formatKES(f.byTerm[2])}</TableCell>
                       <TableCell className="text-right tabular-nums">{formatKES(f.byTerm[3])}</TableCell>
                       <TableCell className="text-right tabular-nums">
-                        {balance <= 0 ? (
-                          <Badge className="bg-success/15 text-success border-success/30" variant="outline">Cleared</Badge>
+                        {f.balanceCredit > 0 ? (
+                          <Badge className="bg-success/15 text-success border-success/30" variant="outline">Credit {formatKES(f.balanceCredit)}</Badge>
+                        ) : f.balanceOwing > 0 ? (
+                          <span className="text-destructive">{formatKES(f.balanceOwing)}</span>
                         ) : (
-                          <span className="text-destructive">{formatKES(balance)}</span>
+                          <Badge className="bg-success/15 text-success border-success/30" variant="outline">Cleared</Badge>
                         )}
                       </TableCell>
                       <TableCell className="text-right">
