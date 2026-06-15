@@ -2,11 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { PermissionGate } from "@/components/permission-gate";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Printer, School as SchoolIcon } from "lucide-react";
@@ -35,7 +34,6 @@ function ReportsPage() {
     <>
       <PageHeader
         title="Reports"
-        description="Print-ready report cards, fee statements, and rosters."
         actions={
           <Button variant="outline" onClick={() => window.print()}>
             <Printer className="h-4 w-4" /> Print current
@@ -68,11 +66,6 @@ function SchoolLetterhead({ school, title }: { school: any; title: string }) {
         <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-md bg-primary text-primary-foreground">
           {school?.logo ? <img src={school.logo} className="h-full w-full object-cover" /> : <SchoolIcon className="h-6 w-6" />}
         </div>
-        <div>
-          <div className="text-lg font-semibold">{school?.name ?? "School"}</div>
-          {school?.motto && <div className="text-xs text-muted-foreground italic">{school.motto}</div>}
-          {school?.address && <div className="text-xs text-muted-foreground">{school.address}</div>}
-        </div>
       </div>
       <div className="text-right">
         <div className="text-sm font-semibold">{title}</div>
@@ -93,20 +86,16 @@ function ReportCards({ school }: { school: any }) {
   return (
     <Card className="mt-4">
       <CardHeader className="print:hidden">
-        <CardTitle className="text-base">Report cards</CardTitle>
-        <CardDescription>One sheet per student. Use the Print button above.</CardDescription>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1">
-            <Label>Exam</Label>
             <Select value={examId} onValueChange={setExamId}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Select exam" /></SelectTrigger>
               <SelectContent>{store.exams.map((e) => <SelectItem key={e.id} value={e.id}>{e.name} — Term {e.term} {e.year}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div className="space-y-1">
-            <Label>Class</Label>
             <Select value={classId} onValueChange={setClassId}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Select class" /></SelectTrigger>
               <SelectContent>{store.classes.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
             </Select>
           </div>
@@ -178,12 +167,10 @@ function FeeStatements({ school }: { school: any }) {
   return (
     <Card className="mt-4">
       <CardHeader className="print:hidden">
-        <CardTitle className="text-base">Fee statements</CardTitle>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1">
-            <Label>Filter</Label>
             <Select value={filter} onValueChange={(v) => setFilter(v as any)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Filter" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All</SelectItem>
                 <SelectItem value="paid">Fully paid</SelectItem>
@@ -192,9 +179,8 @@ function FeeStatements({ school }: { school: any }) {
             </Select>
           </div>
           <div className="space-y-1">
-            <Label>Class</Label>
             <Select value={classId} onValueChange={setClassId}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Select class" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All classes</SelectItem>
                 {store.classes.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}

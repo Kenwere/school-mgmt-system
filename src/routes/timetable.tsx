@@ -21,25 +21,11 @@ export const Route = createFileRoute("/timetable")({
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"] as const;
 
-const DEFAULT_TIME_SLOTS = [
-  "08:00 - 08:40",
-  "08:40 - 09:20",
-  "09:20 - 10:00",
-  "10:00 - 10:30",
-  "10:30 - 11:10",
-  "11:10 - 11:50",
-  "11:50 - 12:30",
-  "12:30 - 14:00",
-  "14:00 - 14:40",
-  "14:40 - 15:20",
-  "15:20 - 16:00",
-];
-
 function TimetablePage() {
   const store = useStore();
   const [classId, setClassId] = useState<string>("");
   const [saving, setSaving] = useState(false);
-  const [timeSlots, setTimeSlots] = useState<string[]>([...DEFAULT_TIME_SLOTS]);
+  const [timeSlots, setTimeSlots] = useState<string[]>([]);
   const [newSlot, setNewSlot] = useState("");
   const [editingSlot, setEditingSlot] = useState<string | null>(null);
   const [editSlotValue, setEditSlotValue] = useState("");
@@ -107,7 +93,6 @@ function TimetablePage() {
   };
 
   const removeTimeSlot = (slot: string) => {
-    if (DEFAULT_TIME_SLOTS.includes(slot)) return;
     setTimeSlots(timeSlots.filter((s) => s !== slot));
   };
 
@@ -250,16 +235,12 @@ function TimetablePage() {
                       ) : (
                         <span>{slot}</span>
                       )}
-                      {!DEFAULT_TIME_SLOTS.includes(slot) && (
-                        <>
-                          <button type="button" onClick={() => startEditSlot(slot)} className="ml-0.5 rounded p-0.5 hover:bg-muted">
-                            <Pencil className="h-3 w-3" />
-                          </button>
-                          <button type="button" onClick={() => removeTimeSlot(slot)} className="rounded p-0.5 hover:bg-destructive/10 text-destructive">
-                            <Trash2 className="h-3 w-3" />
-                          </button>
-                        </>
-                      )}
+                      <button type="button" onClick={() => startEditSlot(slot)} className="ml-0.5 rounded p-0.5 hover:bg-muted">
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                      <button type="button" onClick={() => removeTimeSlot(slot)} className="rounded p-0.5 hover:bg-destructive/10 text-destructive">
+                        <Trash2 className="h-3 w-3" />
+                      </button>
                     </div>
                   ))}
                 </div>

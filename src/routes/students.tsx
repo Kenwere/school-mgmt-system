@@ -40,6 +40,7 @@ function StudentsPage() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<Form>(blank);
   const [classFilter, setClassFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
@@ -76,23 +77,28 @@ function StudentsPage() {
   };
 
   const save = async () => {
-    const payload = {
-      name: form.name.trim(),
-      admissionNo: form.admissionNo.trim(),
-      gender: form.gender,
-      classId: form.classId,
-      feePerYear: form.feePerYear ? Number(form.feePerYear) || 0 : selectedClass?.feePerYear,
-      image: form.image || undefined,
-      parent: form.parent.trim(),
-      phone: form.phone.trim(),
-      email: form.email.trim() || undefined,
-    };
-    if (editing && form.id) {
-      await updateStudent(form.id, payload);
-    } else {
-      await addStudent(payload);
+    setSaving(true);
+    try {
+      const payload = {
+        name: form.name.trim(),
+        admissionNo: form.admissionNo.trim(),
+        gender: form.gender,
+        classId: form.classId,
+        feePerYear: form.feePerYear ? Number(form.feePerYear) || 0 : selectedClass?.feePerYear,
+        image: form.image || undefined,
+        parent: form.parent.trim(),
+        phone: form.phone.trim(),
+        email: form.email.trim() || undefined,
+      };
+      if (editing && form.id) {
+        await updateStudent(form.id, payload);
+      } else {
+        await addStudent(payload);
+      }
+      setOpen(false);
+    } finally {
+      setSaving(false);
     }
-    setOpen(false);
   };
 
   return (
@@ -179,7 +185,7 @@ function StudentsPage() {
                   <div className="space-y-2"><Label>Phone</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
                   <div className="space-y-2 sm:col-span-2"><Label>Email (optional)</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
                 </div>
-                <DialogFooter><Button onClick={save}>{editing ? "Save" : "Create"}</Button></DialogFooter>
+                <DialogFooter><Button onClick={save} disabled={saving}>{saving ? "Saving…" : editing ? "Save" : "Create"}</Button></DialogFooter>
               </DialogContent>
             </Dialog>
           </>

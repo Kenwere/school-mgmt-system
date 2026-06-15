@@ -75,6 +75,13 @@ export type Payment = {
   ref?: string;
 };
 
+export type AttendanceRecord = {
+  id: ID;
+  studentId: ID;
+  weekStart: string;
+  status: "present" | "absent" | "late" | "leave";
+};
+
 export type TimetableEntry = {
   id: ID;
   classId: ID;
@@ -91,6 +98,7 @@ export type State = {
   exams: Exam[];
   marks: Mark[];
   payments: Payment[];
+  attendance: AttendanceRecord[];
   timetableEntries: TimetableEntry[];
   currentUserId: ID | null;
 };
@@ -143,6 +151,7 @@ const emptyState: State = {
   exams: [],
   marks: [],
   payments: [],
+  attendance: [],
   timetableEntries: [],
   currentUserId: null,
 };
@@ -200,7 +209,7 @@ export function initializeStoreFromSupabase() {
   hydratePromise = (async () => {
     const db = requireSupabase();
 
-    const [schoolResult, usersResult, classesResult, studentsResult, examsResult, marksResult, paymentsResult, timetableResult] =
+    const [schoolResult, usersResult, classesResult, studentsResult, examsResult, marksResult, paymentsResult, attendanceResult, timetableResult] =
       await Promise.all([
         db.from("schools").select("*").eq("id", SCHOOL_ID).maybeSingle(),
         db.from("users").select("*").order("created_at", { ascending: true }),
@@ -209,10 +218,11 @@ export function initializeStoreFromSupabase() {
         db.from("exams").select("*").order("date", { ascending: false }),
         db.from("marks").select("*").order("created_at", { ascending: true }),
         db.from("payments").select("*").order("paid_at", { ascending: false }),
+        db.from("attendance").select("*").order("week_start", { ascending: false }),
         db.from("timetable_entries").select("*").order("created_at", { ascending: true }),
       ]);
 
-    const results = [schoolResult, usersResult, classesResult, studentsResult, examsResult, marksResult, paymentsResult, timetableResult];
+    const results = [schoolResult, usersResult, classesResult, studentsResult, examsResult, marksResult, paymentsResult, attendanceResult, timetableResult];
     const failed = results.find((result) => result.error);
     if (failed?.error) showSupabaseError("Loading Supabase data", failed.error);
 
@@ -288,6 +298,12 @@ export function initializeStoreFromSupabase() {
         date: row.paid_at ?? row.date,
         method: row.method,
         ref: row.ref ?? undefined,
+      })),
+      attendance: (attendanceResult.data ?? []).map((row) => ({
+        id: row.id,
+        studentId: row.student_id,
+        weekStart: row.week_start,
+        status: row.status,
       })),
       timetableEntries: (timetableResult.data ?? []).map((row) => ({
         id: row.id,
@@ -528,6 +544,7 @@ export async function deleteStudent(id: ID) {
     students: state.students.filter((x) => x.id !== id),
     marks: state.marks.filter((m) => m.studentId !== id),
     payments: state.payments.filter((p) => p.studentId !== id),
+    attendance: state.attendance.filter((a) => a.studentId !== id),
   }, `Student "${item?.name ?? "record"}" deleted`);
 }
 
@@ -717,6 +734,58 @@ export async function deleteTimetableForClass(classId: ID) {
     ...state,
     timetableEntries: state.timetableEntries.filter((e) => e.classId !== classId),
   }, "Timetable deleted");
+}
+
+// --- Attendance ---
+export async function setAttendance(studentId: ID, weekStart: string, status: AttendanceRecord["status"]) {
+  const db = requireSupabase();
+  const existing = state.attendance.find(
+    (a) => a.studentId === studentId && a.weekStart === weekStart,
+  );
+  const item: AttendanceRecord = existing
+    ? { ...existing, status }
+    : { id: uid(), studentId, weekStart, status };
+  const { error } = await db.from("attendance").upsert({
+    id: item.id,
+    school_id: SCHOOL_ID,
+    student_id: item.studentId,
+    week_start: item.weekStart,
+    status: item.status,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: "student_id,week_start" });
+  if (error) showSupabaseError("Saving attendance", error);
+  const next = existing
+    ? state.attendance.map((a) => (a.id === item.id ? item : a))
+    : [...state.attendance, item];
+  commit({ ...state, attendance: next });
+}
+
+export function attendanceForWeek(weekStart: string) {
+  return state.attendance.filter((a) => a.weekStart === weekStart);
+}
+
+export function getWeekStart(date: Date = new Date()): string {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  d.setDate(diff);
+  d.setHours(0, 0, 0, 0);
+  return d.toISOString().slice(0, 10);
+}
+
+export function getWeeksInMonth(year: number, month: number): string[] {
+  const weeks: string[] = [];
+  const first = new Date(year, month, 1);
+  const last = new Date(year, month + 1, 0);
+  let current = getWeekStart(first);
+  const lastWeek = getWeekStart(last);
+  while (current <= lastWeek) {
+    weeks.push(current);
+    const next = new Date(current);
+    next.setDate(next.getDate() + 7);
+    current = next.toISOString().slice(0, 10);
+  }
+  return weeks;
 }
 
 // --- Derivations ---

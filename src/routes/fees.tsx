@@ -24,7 +24,7 @@ export const Route = createFileRoute("/fees")({
 
 function FeesPage() {
   const store = useStore();
-  const [classFilter, setClassFilter] = useState<string>("all");
+  const [classFilter, setClassFilter] = useState<string>("");
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
@@ -37,6 +37,7 @@ function FeesPage() {
   const [receiptPaymentId, setReceiptPaymentId] = useState<string | null>(null);
 
   const students = store.students.filter((s) => {
+    if (!classFilter) return false;
     if (classFilter !== "all" && s.classId !== classFilter) return false;
     if (search && !`${s.name} ${s.admissionNo}`.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
@@ -94,7 +95,7 @@ function FeesPage() {
     window.setTimeout(() => window.print(), 50);
   };
 
-  const totals = students.reduce(
+  const totals = classFilter ? students.reduce(
     (acc, st) => {
       const f = feeStatusForStudent(st.id);
       if (!f) return acc;
@@ -103,7 +104,7 @@ function FeesPage() {
       return acc;
     },
     { expected: 0, paid: 0 },
-  );
+  ) : { expected: 0, paid: 0 };
 
   return (
     <>
@@ -158,7 +159,7 @@ function FeesPage() {
               />
             </div>
             <Select value={classFilter} onValueChange={setClassFilter}>
-              <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-44"><SelectValue placeholder="Select class" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All classes</SelectItem>
                 {store.classes.map((c) => (
@@ -170,11 +171,13 @@ function FeesPage() {
         }
       />
       <div className="space-y-6 p-6">
+        {classFilter && (
         <div className="grid gap-4 sm:grid-cols-3">
           <Card><CardHeader className="pb-2"><CardDescription>Expected</CardDescription><CardTitle className="text-2xl">{formatKES(totals.expected)}</CardTitle></CardHeader></Card>
           <Card><CardHeader className="pb-2"><CardDescription>Collected</CardDescription><CardTitle className="text-2xl text-success">{formatKES(totals.paid)}</CardTitle></CardHeader></Card>
           <Card><CardHeader className="pb-2"><CardDescription>Outstanding</CardDescription><CardTitle className="text-2xl text-destructive">{formatKES(Math.max(0, totals.expected - totals.paid))}</CardTitle></CardHeader></Card>
         </div>
+        )}
 
         <Card>
           <CardContent className="p-0">
@@ -193,8 +196,11 @@ function FeesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {students.length === 0 && (
-                  <TableRow><TableCell colSpan={9} className="text-center text-sm text-muted-foreground py-10">No students.</TableCell></TableRow>
+                {!classFilter && (
+                  <TableRow><TableCell colSpan={9} className="text-center text-sm text-muted-foreground py-10">Select a class to view fee records.</TableCell></TableRow>
+                )}
+                {classFilter && students.length === 0 && (
+                  <TableRow><TableCell colSpan={9} className="text-center text-sm text-muted-foreground py-10">No students in this class.</TableCell></TableRow>
                 )}
                 {students.map((st) => {
                   const f = feeStatusForStudent(st.id);
