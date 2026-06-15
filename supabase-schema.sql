@@ -119,6 +119,7 @@ alter table public.classes add column if not exists fee_term_2 numeric not null 
 alter table public.classes add column if not exists fee_term_3 numeric not null default 0;
 alter table public.students add column if not exists image text;
 alter table public.students add column if not exists carried_forward numeric not null default 0;
+alter table public.students add column if not exists paid_carried_forward numeric not null default 0;
 alter table public.payments add column if not exists paid_at timestamptz not null default now();
 
 alter table public.schools enable row level security;

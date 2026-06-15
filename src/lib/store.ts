@@ -44,6 +44,7 @@ export type Student = {
   classId: ID;
   feePerYear?: number;
   carriedForward?: number;
+  paidCarriedForward?: number;
   image?: string;
   parent: string;
   phone: string;
@@ -292,6 +293,7 @@ export function initializeStoreFromSupabase() {
         classId: row.class_id ?? "",
         feePerYear: row.fee_per_year == null ? undefined : Number(row.fee_per_year),
         carriedForward: row.carried_forward == null ? undefined : Number(row.carried_forward),
+        paidCarriedForward: row.paid_carried_forward == null ? undefined : Number(row.paid_carried_forward),
         image: row.image ?? undefined,
         parent: row.parent,
         phone: row.phone,
@@ -532,6 +534,7 @@ export async function addStudent(st: Omit<Student, "id">) {
     class_id: item.classId || null,
     fee_per_year: item.feePerYear ?? null,
     carried_forward: item.carriedForward ?? null,
+    paid_carried_forward: item.paidCarriedForward ?? null,
     image: item.image ?? null,
     parent: item.parent,
     phone: item.phone,
@@ -550,6 +553,7 @@ export async function updateStudent(id: ID, patch: Partial<Student>) {
     ...(patch.classId !== undefined ? { class_id: patch.classId || null } : {}),
     ...(patch.feePerYear !== undefined ? { fee_per_year: patch.feePerYear ?? null } : {}),
     ...(patch.carriedForward !== undefined ? { carried_forward: patch.carriedForward ?? null } : {}),
+    ...(patch.paidCarriedForward !== undefined ? { paid_carried_forward: patch.paidCarriedForward ?? null } : {}),
     ...(patch.image !== undefined ? { image: patch.image ?? null } : {}),
     ...(patch.parent !== undefined ? { parent: patch.parent } : {}),
     ...(patch.phone !== undefined ? { phone: patch.phone } : {}),
@@ -580,24 +584,38 @@ export async function promoteStudents(studentIds: ID[], toClassId: ID) {
   if (!destClass) return;
 
   const now = new Date().toISOString();
-  const updates: { id: ID; classId: ID; feePerYear: number; carriedForward: number }[] = [];
+  type Update = { id: ID; classId: ID; feePerYear: number; carriedForward: number; paidCarriedForward: number };
+  const updates: Update[] = [];
 
   for (const sid of studentIds) {
     const st = state.students.find((s) => s.id === sid);
     if (!st) continue;
     const oldClass = state.classes.find((c) => c.id === st.classId);
     const oldYearly = st.feePerYear ?? oldClass?.feePerYear ?? 0;
+    const oldCarriedForward = st.carriedForward ?? 0;
+    const oldTotalExpected = oldYearly + oldCarriedForward;
     const paidTotal = state.payments
       .filter((p) => p.studentId === sid)
       .reduce((sum, p) => sum + p.amount, 0);
-    const balance = Math.max(0, oldYearly - paidTotal);
-    const newFee = destClass.feePerYear + balance;
-    updates.push({ id: sid, classId: toClassId, feePerYear: newFee, carriedForward: balance });
+    const balance = Math.max(0, oldTotalExpected - paidTotal);
+    updates.push({
+      id: sid,
+      classId: toClassId,
+      feePerYear: destClass.feePerYear,
+      carriedForward: balance,
+      paidCarriedForward: paidTotal,
+    });
   }
 
   const results = await Promise.all(
     updates.map((u) =>
-      db.from("students").update({ class_id: u.classId, fee_per_year: u.feePerYear, carried_forward: u.carriedForward, updated_at: now }).eq("id", u.id),
+      db.from("students").update({
+        class_id: u.classId,
+        fee_per_year: u.feePerYear,
+        carried_forward: u.carriedForward,
+        paid_carried_forward: u.paidCarriedForward,
+        updated_at: now,
+      }).eq("id", u.id),
     ),
   );
   const failed = results.find((r) => r.error);
@@ -605,7 +623,15 @@ export async function promoteStudents(studentIds: ID[], toClassId: ID) {
 
   const next = state.students.map((s) => {
     const u = updates.find((x) => x.id === s.id);
-    return u ? { ...s, classId: u.classId, feePerYear: u.feePerYear, carriedForward: u.carriedForward } : s;
+    return u
+      ? {
+          ...s,
+          classId: u.classId,
+          feePerYear: u.feePerYear,
+          carriedForward: u.carriedForward,
+          paidCarriedForward: u.paidCarriedForward,
+        }
+      : s;
   });
   commit({ ...state, students: next }, `${studentIds.length} student(s) promoted with balance carry-forward`);
 }
@@ -878,22 +904,25 @@ export function feeStatusForStudent(studentId: ID) {
   if (!st) return null;
   const cls = s.classes.find((c) => c.id === st.classId);
   const classFee = cls?.feePerYear ?? 0;
-  const yearly = st.feePerYear ?? classFee ?? 0;
   const carriedForward = st.carriedForward ?? 0;
-  const expectedByTerm: Record<Term, number> = st.feePerYear
-    ? { 1: st.feePerYear / 3, 2: st.feePerYear / 3, 3: st.feePerYear / 3 }
-    : {
-        1: cls?.feeTerm1 ?? yearly / 3,
-        2: cls?.feeTerm2 ?? yearly / 3,
-        3: cls?.feeTerm3 ?? yearly / 3,
-      };
+  const yearly = st.feePerYear ?? classFee;
+  const expectedTotal = yearly + carriedForward;
   const perTerm = yearly / 3;
   const byTerm: Record<Term, number> = { 1: 0, 2: 0, 3: 0 };
   for (const p of s.payments.filter((p) => p.studentId === studentId)) {
     byTerm[p.term] = (byTerm[p.term] ?? 0) + p.amount;
   }
-  const paidTotal = byTerm[1] + byTerm[2] + byTerm[3];
-  const balanceTotal = yearly - paidTotal;
+  const allPaymentsTotal = byTerm[1] + byTerm[2] + byTerm[3];
+  const paidCarriedForward = st.paidCarriedForward ?? 0;
+  const paidTotal = Math.max(0, allPaymentsTotal - paidCarriedForward);
+  const balanceTotal = expectedTotal - paidTotal;
+  const expectedByTerm: Record<Term, number> = st.feePerYear
+    ? { 1: perTerm, 2: perTerm, 3: perTerm }
+    : {
+        1: cls?.feeTerm1 ?? perTerm,
+        2: cls?.feeTerm2 ?? perTerm,
+        3: cls?.feeTerm3 ?? perTerm,
+      };
   return {
     student: st,
     class: cls,
@@ -907,6 +936,7 @@ export function feeStatusForStudent(studentId: ID) {
     balanceTotal,
     balanceOwing: Math.max(0, balanceTotal),
     balanceCredit: Math.max(0, -balanceTotal),
+    allPaymentsTotal,
   };
 }
 

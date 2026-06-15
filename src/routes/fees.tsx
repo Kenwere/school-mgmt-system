@@ -99,7 +99,7 @@ function FeesPage() {
     (acc, st) => {
       const f = feeStatusForStudent(st.id);
       if (!f) return acc;
-      acc.expected += f.yearly;
+      acc.expected += f.yearly + f.carriedForward;
       acc.paid += f.paidTotal;
       return acc;
     },
