@@ -91,6 +91,17 @@ create table if not exists public.payments (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.attendance (
+  id uuid primary key,
+  school_id text not null default 'default' references public.schools(id) on delete cascade,
+  student_id uuid not null references public.students(id) on delete cascade,
+  week_start date not null,
+  status text not null check (status in ('present', 'absent', 'late', 'leave')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (student_id, week_start)
+);
+
 create table if not exists public.timetable_entries (
   id uuid primary key,
   school_id text not null default 'default' references public.schools(id) on delete cascade,
@@ -116,6 +127,7 @@ alter table public.students enable row level security;
 alter table public.exams enable row level security;
 alter table public.marks enable row level security;
 alter table public.payments enable row level security;
+alter table public.attendance enable row level security;
 alter table public.timetable_entries enable row level security;
 
 drop policy if exists "Allow school reads" on public.schools;
@@ -152,6 +164,11 @@ drop policy if exists "Allow payment reads" on public.payments;
 create policy "Allow payment reads" on public.payments for select to anon, authenticated using (true);
 drop policy if exists "Allow payment writes" on public.payments;
 create policy "Allow payment writes" on public.payments for all to anon, authenticated using (true) with check (true);
+
+drop policy if exists "Allow attendance reads" on public.attendance;
+create policy "Allow attendance reads" on public.attendance for select to anon, authenticated using (true);
+drop policy if exists "Allow attendance writes" on public.attendance;
+create policy "Allow attendance writes" on public.attendance for all to anon, authenticated using (true) with check (true);
 
 drop policy if exists "Allow timetable reads" on public.timetable_entries;
 create policy "Allow timetable reads" on public.timetable_entries for select to anon, authenticated using (true);

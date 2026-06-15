@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TransportRouteImport } from './routes/transport'
+import { Route as PromotionRouteImport } from './routes/promotion'
 import { Route as TimetableRouteImport } from './routes/timetable'
 import { Route as TeachersRouteImport } from './routes/teachers'
 import { Route as StudentsRouteImport } from './routes/students'
@@ -32,6 +33,11 @@ import { Route as AnnouncementsRouteImport } from './routes/announcements'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as StudentStudentIdRouteImport } from './routes/student.$studentId'
 
+const PromotionRoute = PromotionRouteImport.update({
+  id: '/promotion',
+  path: '/promotion',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TransportRoute = TransportRouteImport.update({
   id: '/transport',
   path: '/transport',
@@ -144,6 +150,7 @@ const StudentStudentIdRoute = StudentStudentIdRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
+  '/promotion': typeof PromotionRoute
   '/': typeof IndexRoute
   '/announcements': typeof AnnouncementsRoute
   '/attendance': typeof AttendanceRoute
@@ -156,6 +163,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/marks': typeof MarksRoute
   '/messages': typeof MessagesRoute
+  '/promotion': typeof PromotionRoute
   '/ranking': typeof RankingRoute
   '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
@@ -180,6 +188,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/marks': typeof MarksRoute
   '/messages': typeof MessagesRoute
+  '/promotion': typeof PromotionRoute
   '/ranking': typeof RankingRoute
   '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
@@ -192,6 +201,32 @@ export interface FileRoutesByTo {
   '/student/$studentId': typeof StudentStudentIdRoute
 }
 export interface FileRoutesById {
+  __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
+  '/announcements': typeof AnnouncementsRoute
+  '/attendance': typeof AttendanceRoute
+  '/classes': typeof ClassesRoute
+  '/exams': typeof ExamsRoute
+  '/fees': typeof FeesRoute
+  '/grades': typeof GradesRoute
+  '/hostel': typeof HostelRoute
+  '/library': typeof LibraryRoute
+  '/login': typeof LoginRoute
+  '/marks': typeof MarksRoute
+  '/messages': typeof MessagesRoute
+  '/promotion': typeof PromotionRoute
+  '/ranking': typeof RankingRoute
+  '/register': typeof RegisterRoute
+  '/reports': typeof ReportsRoute
+  '/settings': typeof SettingsRoute
+  '/staff': typeof StaffRoute
+  '/students': typeof StudentsRoute
+  '/teachers': typeof TeachersRoute
+  '/timetable': typeof TimetableRoute
+  '/transport': typeof TransportRoute
+  '/student/$studentId': typeof StudentStudentIdRoute
+}
+export interface FileRouteTypes {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/announcements': typeof AnnouncementsRoute
@@ -231,6 +266,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/marks'
     | '/messages'
+    | '/promotion'
     | '/ranking'
     | '/register'
     | '/reports'
@@ -255,6 +291,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/marks'
     | '/messages'
+    | '/promotion'
     | '/ranking'
     | '/register'
     | '/reports'
@@ -279,6 +316,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/marks'
     | '/messages'
+    | '/promotion'
     | '/ranking'
     | '/register'
     | '/reports'
@@ -304,6 +342,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   MarksRoute: typeof MarksRoute
   MessagesRoute: typeof MessagesRoute
+  PromotionRoute: typeof PromotionRoute
   RankingRoute: typeof RankingRoute
   RegisterRoute: typeof RegisterRoute
   ReportsRoute: typeof ReportsRoute
@@ -386,6 +425,13 @@ declare module '@tanstack/react-router' {
       path: '/messages'
       fullPath: '/messages'
       preLoaderRoute: typeof MessagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/promotion': {
+      id: '/promotion'
+      path: '/promotion'
+      fullPath: '/promotion'
+      preLoaderRoute: typeof PromotionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/marks': {
@@ -488,6 +534,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   MarksRoute: MarksRoute,
   MessagesRoute: MessagesRoute,
+  PromotionRoute: PromotionRoute,
   RankingRoute: RankingRoute,
   RegisterRoute: RegisterRoute,
   ReportsRoute: ReportsRoute,

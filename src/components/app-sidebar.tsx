@@ -51,6 +51,7 @@ const groups: { label: string; items: Item[] }[] = [
       { title: "Grades & ranking", url: "/grades", icon: Award },
       { title: "Attendance", url: "/attendance", icon: CalendarCheck },
       { title: "Timetable", url: "/timetable", icon: Calendar },
+      { title: "Promotion", url: "/promotion", icon: GraduationCap, adminOnly: true },
     ],
   },
   {

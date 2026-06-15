@@ -7,7 +7,7 @@ export type Term = 1 | 2 | 3;
 
 export type School = {
   name: string;
-  logo: string; // dataURL
+  logo: string;
   address: string;
   phone: string;
   email: string;
@@ -18,9 +18,9 @@ export type User = {
   id: ID;
   name: string;
   email: string;
-  password: string; // demo only - plain text in Supabase
+  password: string;
   role: "admin" | "teacher";
-  permissions: string[]; // route paths the teacher can access; ignored for admin
+  permissions: string[];
 };
 
 export type ClassRow = {
@@ -62,7 +62,7 @@ export type Mark = {
   examId: ID;
   studentId: ID;
   subject: string;
-  score: number; // 0-100
+  score: number;
 };
 
 export type Payment = {
@@ -143,6 +143,25 @@ const DEFAULT_TEACHER_PERMISSIONS = [
 
 const SCHOOL_ID = "default";
 
+const LS_KEY = "school_mgmt_user_id";
+
+function loadUserId(): ID | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return localStorage.getItem(LS_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function saveUserId(id: ID | null) {
+  if (typeof window === "undefined") return;
+  try {
+    if (id) localStorage.setItem(LS_KEY, id);
+    else localStorage.removeItem(LS_KEY);
+  } catch { }
+}
+
 const emptyState: State = {
   school: null,
   users: [],
@@ -153,7 +172,7 @@ const emptyState: State = {
   payments: [],
   attendance: [],
   timetableEntries: [],
-  currentUserId: null,
+  currentUserId: loadUserId(),
 };
 
 let state: State = emptyState;
@@ -369,6 +388,7 @@ export async function registerSchool(input: {
   });
   if (userResult.error) showSupabaseError("Admin registration", userResult.error);
 
+  saveUserId(adminUser.id);
   const nextState: State = {
     ...state,
     school: input.school,
@@ -383,11 +403,13 @@ export function login(email: string, password: string): User | null {
   const e = email.toLowerCase().trim();
   const u = state.users.find((x) => x.email === e && x.password === password);
   if (!u) return null;
+  saveUserId(u.id);
   commit({ ...state, currentUserId: u.id });
   return u;
 }
 
 export function logout() {
+  saveUserId(null);
   commit({ ...state, currentUserId: null });
 }
 
@@ -546,6 +568,42 @@ export async function deleteStudent(id: ID) {
     payments: state.payments.filter((p) => p.studentId !== id),
     attendance: state.attendance.filter((a) => a.studentId !== id),
   }, `Student "${item?.name ?? "record"}" deleted`);
+}
+
+export async function promoteStudents(studentIds: ID[], toClassId: ID) {
+  const db = requireSupabase();
+  const destClass = state.classes.find((c) => c.id === toClassId);
+  if (!destClass) return;
+
+  const now = new Date().toISOString();
+  const updates: { id: ID; classId: ID; feePerYear: number }[] = [];
+
+  for (const sid of studentIds) {
+    const st = state.students.find((s) => s.id === sid);
+    if (!st) continue;
+    const oldClass = state.classes.find((c) => c.id === st.classId);
+    const oldYearly = st.feePerYear ?? oldClass?.feePerYear ?? 0;
+    const paidTotal = state.payments
+      .filter((p) => p.studentId === sid)
+      .reduce((sum, p) => sum + p.amount, 0);
+    const balance = Math.max(0, oldYearly - paidTotal);
+    const newFee = destClass.feePerYear + balance;
+    updates.push({ id: sid, classId: toClassId, feePerYear: newFee });
+  }
+
+  const results = await Promise.all(
+    updates.map((u) =>
+      db.from("students").update({ class_id: u.classId, fee_per_year: u.feePerYear, updated_at: now }).eq("id", u.id),
+    ),
+  );
+  const failed = results.find((r) => r.error);
+  if (failed?.error) showSupabaseError("Promoting students", failed.error);
+
+  const next = state.students.map((s) => {
+    const u = updates.find((x) => x.id === s.id);
+    return u ? { ...s, classId: u.classId, feePerYear: u.feePerYear } : s;
+  });
+  commit({ ...state, students: next }, `${studentIds.length} student(s) promoted with balance carry-forward`);
 }
 
 // --- Exams ---
