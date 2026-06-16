@@ -3,7 +3,16 @@ import { useRouter } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useStore } from "@/lib/store";
 import { Lock } from "lucide-react";
+
+function LoadingGate() {
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary/30 border-t-primary" />
+    </div>
+  );
+}
 
 export function PermissionGate({
   path,
@@ -15,9 +24,13 @@ export function PermissionGate({
   children: ReactNode;
 }) {
   const auth = useAuth();
+  const store = useStore();
   const router = useRouter();
 
   if (!auth.user) {
+    if (!auth.initialized && store.currentUserId) {
+      return <LoadingGate />;
+    }
     return (
       <div className="flex min-h-[60vh] items-center justify-center p-6">
         <Card className="w-full max-w-md text-center">

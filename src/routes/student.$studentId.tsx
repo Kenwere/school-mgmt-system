@@ -132,36 +132,28 @@ function StudentDetailPage() {
   return (
     <>
       <style>{`
+        .print-fee { display: none; }
         @media print {
           body * { visibility: hidden !important; }
-          #student-print-area, #student-print-area * { visibility: visible !important; }
-          #student-print-area {
+          .print-fee, .print-fee * { visibility: visible !important; }
+          .print-fee {
             position: fixed !important; top: 0 !important; left: 0 !important;
             width: 100% !important; height: auto !important; padding: 32px 40px !important;
             background: white !important; color: black !important; z-index: 9999 !important;
+            display: block !important;
           }
-          #student-print-area table {
-            border-collapse: collapse !important;
-            width: 100% !important;
+          .print-fee table { border-collapse: collapse !important; width: 100% !important; }
+          .print-fee th {
+            background: #f5f5f5 !important; color: #000 !important;
+            font-weight: 600 !important; padding: 8px 12px !important;
+            border: 1px solid #000 !important;
           }
-          #student-print-area th {
-            background: #f5f5f5 !important;
-            color: #000 !important;
-            font-weight: 600 !important;
-            padding: 8px 12px !important;
-            border: 1px solid #ddd !important;
-          }
-          #student-print-area td {
-            padding: 6px 12px !important;
-            border: 1px solid #ddd !important;
+          .print-fee td {
+            padding: 6px 12px !important; border: 1px solid #000 !important;
             color: #000 !important;
           }
-          #student-print-area tr {
-            page-break-inside: avoid !important;
-          }
+          .print-fee tr { page-break-inside: avoid !important; }
           .print-hide { display: none !important; }
-          .print-card { box-shadow: none !important; border: none !important; background: transparent !important; }
-          .print-card > div { padding: 0 !important; }
         }
       `}</style>
 
@@ -467,6 +459,62 @@ function StudentDetailPage() {
             </Card>
           )}
         </div>
+      </div>
+
+      {/* Print-only fee statement */}
+      <div className="print-fee">
+        <div style={{ marginBottom: 24 }}>
+          <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>{student.name}</h1>
+          <p style={{ margin: "4px 0 0", color: "#555", fontSize: 13 }}>
+            Admission No: {student.admissionNo}
+          </p>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th style={{ textAlign: "left", width: 140 }}>Date</th>
+              <th style={{ textAlign: "left" }}>Description</th>
+              <th style={{ textAlign: "right", width: 120 }}>Debit (KES)</th>
+              <th style={{ textAlign: "right", width: 120 }}>Credit (KES)</th>
+              <th style={{ textAlign: "right", width: 120 }}>Balance (KES)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {ledgerEntries.length === 1 && ledgerEntries[0].id === "empty" ? (
+              <tr>
+                <td colSpan={5} style={{ textAlign: "center", padding: 32, color: "#888" }}>
+                  No fee records.
+                </td>
+              </tr>
+            ) : (
+              ledgerEntries.map((entry) => (
+                <tr key={entry.id}>
+                  <td style={{ fontSize: 13, color: "#555" }}>{entry.date}</td>
+                  <td style={{ fontSize: 13 }}>{entry.description}</td>
+                  <td style={{ textAlign: "right", fontFamily: "monospace" }}>
+                    {entry.debit > 0 ? formatKES(entry.debit) : "—"}
+                  </td>
+                  <td style={{ textAlign: "right", fontFamily: "monospace" }}>
+                    {entry.credit > 0 ? formatKES(entry.credit) : "—"}
+                  </td>
+                  <td style={{ textAlign: "right", fontFamily: "monospace", fontWeight: 600 }}>
+                    {entry.balance > 0 ? formatKES(entry.balance) : entry.balance < 0 ? `${formatKES(Math.abs(entry.balance))} CR` : "0"}
+                  </td>
+                </tr>
+              ))
+            )}
+            {ledgerEntries.length > 1 && (
+              <tr style={{ borderTop: "2px solid #000", fontWeight: 700 }}>
+                <td colSpan={2} style={{ fontSize: 13 }}>Totals</td>
+                <td style={{ textAlign: "right", fontFamily: "monospace" }}>{formatKES(totalDebit)}</td>
+                <td style={{ textAlign: "right", fontFamily: "monospace" }}>{formatKES(totalCredit)}</td>
+                <td style={{ textAlign: "right", fontFamily: "monospace" }}>
+                  {closingBalance > 0 ? formatKES(closingBalance) : closingBalance < 0 ? `${formatKES(Math.abs(closingBalance))} CR` : "0"}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </>
   );
