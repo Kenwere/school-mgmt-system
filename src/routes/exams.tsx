@@ -30,7 +30,7 @@ function ExamsPage() {
   const [term, setTerm] = useState<Term>(1);
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [date, setDate] = useState<string>(new Date().toISOString().slice(0, 10));
-  const [classId, setClassId] = useState<ID>("");
+  const [classId, setClassId] = useState<string>("all");
 
   const openCreate = () => {
     setEditingId(null);
@@ -38,7 +38,7 @@ function ExamsPage() {
     setTerm(1);
     setYear(new Date().getFullYear());
     setDate(new Date().toISOString().slice(0, 10));
-    setClassId("");
+    setClassId("all");
     setOpen(true);
   };
 
@@ -48,13 +48,13 @@ function ExamsPage() {
     setTerm(exam.term);
     setYear(exam.year);
     setDate(exam.date);
-    setClassId(exam.classId ?? "");
+    setClassId(exam.classId ?? "all");
     setOpen(true);
   };
 
   const save = () => {
     if (!name.trim()) return;
-    const payload: Omit<Exam, "id"> = { name: name.trim(), term, year, date, classId: classId || undefined };
+    const payload: Omit<Exam, "id"> = { name: name.trim(), term, year, date, classId: classId === "all" ? undefined : classId };
     if (editingId) {
       updateExam(editingId, payload);
     } else {
@@ -100,7 +100,7 @@ function ExamsPage() {
                   <Select value={classId} onValueChange={setClassId}>
                     <SelectTrigger><SelectValue placeholder="All classes" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All classes</SelectItem>
+                      <SelectItem value="all">All classes</SelectItem>
                       {store.classes.map((c) => (
                         <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                       ))}
