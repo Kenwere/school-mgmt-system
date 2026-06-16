@@ -45,7 +45,10 @@ create table if not exists public.students (
   name text not null,
   gender text not null default '',
   class_id uuid references public.classes(id) on delete set null,
-  fee_per_year numeric,
+  active boolean not null default true,
+  fee_per_year numeric not null default 0,
+  carried_forward numeric not null default 0,
+  paid_carried_forward numeric not null default 0,
   image text,
   parent text not null default '',
   phone text not null default '',
@@ -61,6 +64,7 @@ create table if not exists public.exams (
   term integer not null check (term in (1, 2, 3)),
   year integer not null,
   date date not null,
+  class_id uuid references public.classes(id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -114,12 +118,6 @@ create table if not exists public.timetable_entries (
   unique (class_id, day, time_slot)
 );
 
-alter table public.classes add column if not exists fee_term_1 numeric not null default 0;
-alter table public.classes add column if not exists fee_term_2 numeric not null default 0;
-alter table public.classes add column if not exists fee_term_3 numeric not null default 0;
-alter table public.students add column if not exists image text;
-alter table public.students add column if not exists carried_forward numeric not null default 0;
-alter table public.students add column if not exists paid_carried_forward numeric not null default 0;
 alter table public.payments add column if not exists paid_at timestamptz not null default now();
 
 alter table public.schools enable row level security;
