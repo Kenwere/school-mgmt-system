@@ -14,6 +14,7 @@ import {
 
 type AuthContextValue = {
   user: User | null;
+  initialized: boolean;
   signIn: (email: string, password: string) => Promise<boolean>;
   signOut: () => void;
   register: (input: {
@@ -28,10 +29,15 @@ const AuthContext = React.createContext<AuthContextValue | undefined>(undefined)
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const store = useStore();
+  const [initialized, setInitialized] = React.useState(false);
   const user = store.users.find((u) => u.id === store.currentUserId) ?? null;
 
   React.useEffect(() => {
-    void initializeStoreFromSupabase();
+    initializeStoreFromSupabase()
+      .catch(() => {
+        /* initialisation errors are handled inside store */
+      })
+      .finally(() => setInitialized(true));
   }, []);
 
   const signIn = React.useCallback(
@@ -65,8 +71,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const value = React.useMemo(
-    () => ({ user, signIn, signOut, register, canAccess }),
-    [user, signIn, signOut, register, canAccess],
+    () => ({ user, initialized, signIn, signOut, register, canAccess }),
+    [user, initialized, signIn, signOut, register, canAccess],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

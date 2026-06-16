@@ -36,11 +36,12 @@ function RegisterPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (store.school && !auth.user) {
+    if (auth.initialized && store.school && !auth.user) {
       void router.navigate({ to: "/login" });
     }
-  }, [auth.user, router, store.school]);
+  }, [auth.initialized, auth.user, router, store.school]);
 
+  if (!auth.initialized) return null;
   if (store.school) return null;
 
   const onLogo = (f: File | null) => {

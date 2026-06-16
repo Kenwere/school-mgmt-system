@@ -43,16 +43,30 @@ export const Route = createFileRoute("/")({
   component: HomePage,
 });
 
+function LoadingScreen() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="flex flex-col items-center gap-3">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary/30 border-t-primary" />
+        <p className="text-sm text-muted-foreground">Loading...</p>
+      </div>
+    </div>
+  );
+}
+
 function HomePage() {
   const auth = useAuth();
-  if (!auth.user) return <Landing />;
-  return <Dashboard />;
+  const store = useStore();
+  if (auth.user) return <Dashboard />;
+  if (!auth.initialized && store.currentUserId) return <LoadingScreen />;
+  return <Landing />;
 }
 
 function Landing() {
   const router = useRouter();
+  const auth = useAuth();
   const store = useStore();
-  const hasSchool = !!store.school;
+  const hasSchool = auth.initialized && !!store.school;
   const schoolName = store.school?.name ?? "SchoolSuite";
 
   return (
