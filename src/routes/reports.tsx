@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Printer, School as SchoolIcon } from "lucide-react";
 import {
-  feeStatusForStudent,
+  studentFeeLedger,
   formatKES,
   gradeFromScore,
   rankingForExam,
@@ -154,13 +154,13 @@ function FeeStatements({ school }: { school: any }) {
   const rows = store.students
     .filter((s) => s.active !== false && (classId === "all" || s.classId === classId))
     .map((s) => {
-      const f = feeStatusForStudent(s.id);
+      const f = studentFeeLedger(s.id);
       return { s, f };
     })
     .filter(({ f }) => {
       if (!f) return false;
-      if (filter === "paid") return f.balanceTotal <= 0 && f.yearly > 0;
-      if (filter === "pending") return f.balanceTotal > 0;
+      if (filter === "paid") return f.balance <= 0 && f.totalDebit > 0;
+      if (filter === "pending") return f.balance > 0;
       return true;
     });
 
@@ -197,11 +197,8 @@ function FeeStatements({ school }: { school: any }) {
               <TableHead>Adm No</TableHead>
               <TableHead>Student</TableHead>
               <TableHead>Class</TableHead>
-              <TableHead className="text-right">Yearly</TableHead>
-              <TableHead className="text-right">T1</TableHead>
-              <TableHead className="text-right">T2</TableHead>
-              <TableHead className="text-right">T3</TableHead>
-              <TableHead className="text-right">Paid</TableHead>
+              <TableHead className="text-right">Total debited</TableHead>
+              <TableHead className="text-right">Total paid</TableHead>
               <TableHead className="text-right">Balance</TableHead>
             </TableRow>
           </TableHeader>
@@ -211,11 +208,8 @@ function FeeStatements({ school }: { school: any }) {
                 <TableCell className="font-mono text-xs">{s.admissionNo}</TableCell>
                 <TableCell className="font-medium">{s.name}</TableCell>
                 <TableCell>{f.class?.name ?? "—"}</TableCell>
-                <TableCell className="text-right tabular-nums">{formatKES(f.yearly)}</TableCell>
-                <TableCell className="text-right tabular-nums">{formatKES(f.byTerm[1])}</TableCell>
-                <TableCell className="text-right tabular-nums">{formatKES(f.byTerm[2])}</TableCell>
-                <TableCell className="text-right tabular-nums">{formatKES(f.byTerm[3])}</TableCell>
-                <TableCell className="text-right tabular-nums">{formatKES(f.paidTotal)}</TableCell>
+                <TableCell className="text-right tabular-nums">{formatKES(f.totalDebit)}</TableCell>
+                <TableCell className="text-right tabular-nums">{formatKES(f.totalCredit)}</TableCell>
                 <TableCell className="text-right tabular-nums">{f.balanceCredit > 0 ? <Badge variant="outline" className="bg-success/15 text-success border-success/30">Credit {formatKES(f.balanceCredit)}</Badge> : f.balanceOwing > 0 ? <span className="text-destructive">{formatKES(f.balanceOwing)}</span> : <Badge variant="outline" className="bg-success/15 text-success border-success/30">Cleared</Badge>}</TableCell>
               </TableRow>
             ))}

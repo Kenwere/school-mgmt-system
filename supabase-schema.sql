@@ -47,8 +47,6 @@ create table if not exists public.students (
   class_id uuid references public.classes(id) on delete set null,
   active boolean not null default true,
   fee_per_year numeric not null default 0,
-  carried_forward numeric not null default 0,
-  paid_carried_forward numeric not null default 0,
   image text,
   parent text not null default '',
   phone text not null default '',
@@ -95,6 +93,17 @@ create table if not exists public.payments (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.fee_ledger (
+  id uuid primary key,
+  school_id text not null default 'default' references public.schools(id) on delete cascade,
+  student_id uuid not null references public.students(id) on delete cascade,
+  type text not null check (type in ('debit', 'credit')),
+  description text not null default '',
+  amount numeric not null default 0,
+  date date not null,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists public.attendance (
   id uuid primary key,
   school_id text not null default 'default' references public.schools(id) on delete cascade,
@@ -120,12 +129,15 @@ create table if not exists public.timetable_entries (
 
 alter table public.payments add column if not exists paid_at timestamptz not null default now();
 
+alter table public.fee_ledger add column if not exists payment_id uuid references public.payments(id) on delete set null;
+
 alter table public.schools enable row level security;
 alter table public.users enable row level security;
 alter table public.classes enable row level security;
 alter table public.students enable row level security;
 alter table public.exams enable row level security;
 alter table public.marks enable row level security;
+alter table public.fee_ledger enable row level security;
 alter table public.payments enable row level security;
 alter table public.attendance enable row level security;
 alter table public.timetable_entries enable row level security;
@@ -164,6 +176,11 @@ drop policy if exists "Allow payment reads" on public.payments;
 create policy "Allow payment reads" on public.payments for select to anon, authenticated using (true);
 drop policy if exists "Allow payment writes" on public.payments;
 create policy "Allow payment writes" on public.payments for all to anon, authenticated using (true) with check (true);
+
+drop policy if exists "Allow fee_ledger reads" on public.fee_ledger;
+create policy "Allow fee_ledger reads" on public.fee_ledger for select to anon, authenticated using (true);
+drop policy if exists "Allow fee_ledger writes" on public.fee_ledger;
+create policy "Allow fee_ledger writes" on public.fee_ledger for all to anon, authenticated using (true) with check (true);
 
 drop policy if exists "Allow attendance reads" on public.attendance;
 create policy "Allow attendance reads" on public.attendance for select to anon, authenticated using (true);

@@ -44,8 +44,6 @@ export type Student = {
   classId: ID;
   active: boolean;
   feePerYear?: number;
-  carriedForward?: number;
-  paidCarriedForward?: number;
   image?: string;
   parent: string;
   phone: string;
@@ -72,11 +70,20 @@ export type Mark = {
 export type Payment = {
   id: ID;
   studentId: ID;
-  term: Term;
   amount: number;
   date: string;
   method: string;
   ref?: string;
+};
+
+export type FeeLedgerEntry = {
+  id: ID;
+  studentId: ID;
+  type: "debit" | "credit";
+  description: string;
+  amount: number;
+  date: string;
+  paymentId?: ID;
 };
 
 export type AttendanceRecord = {
@@ -102,6 +109,7 @@ export type State = {
   exams: Exam[];
   marks: Mark[];
   payments: Payment[];
+  feeLedger: FeeLedgerEntry[];
   attendance: AttendanceRecord[];
   timetableEntries: TimetableEntry[];
   currentUserId: ID | null;
@@ -174,6 +182,7 @@ const emptyState: State = {
   exams: [],
   marks: [],
   payments: [],
+  feeLedger: [],
   attendance: [],
   timetableEntries: [],
   currentUserId: loadUserId(),
@@ -232,7 +241,7 @@ export function initializeStoreFromSupabase() {
   hydratePromise = (async () => {
     const db = requireSupabase();
 
-    const [schoolResult, usersResult, classesResult, studentsResult, examsResult, marksResult, paymentsResult, attendanceResult, timetableResult] =
+    const [schoolResult, usersResult, classesResult, studentsResult, examsResult, marksResult, paymentsResult, feeLedgerResult, attendanceResult, timetableResult] =
       await Promise.all([
         db.from("schools").select("*").eq("id", SCHOOL_ID).maybeSingle(),
         db.from("users").select("*").order("created_at", { ascending: true }),
@@ -241,11 +250,12 @@ export function initializeStoreFromSupabase() {
         db.from("exams").select("*").order("date", { ascending: false }),
         db.from("marks").select("*").order("created_at", { ascending: true }),
         db.from("payments").select("*").order("paid_at", { ascending: false }),
+        db.from("fee_ledger").select("*").order("date", { ascending: true }),
         db.from("attendance").select("*").order("week_start", { ascending: false }),
         db.from("timetable_entries").select("*").order("created_at", { ascending: true }),
       ]);
 
-    const results = [schoolResult, usersResult, classesResult, studentsResult, examsResult, marksResult, paymentsResult, attendanceResult, timetableResult];
+    const results = [schoolResult, usersResult, classesResult, studentsResult, examsResult, marksResult, paymentsResult, feeLedgerResult, attendanceResult, timetableResult];
     const failed = results.find((result) => result.error);
     if (failed?.error) showSupabaseError("Loading Supabase data", failed.error);
 
@@ -295,8 +305,6 @@ export function initializeStoreFromSupabase() {
         classId: row.class_id ?? "",
         active: row.active !== false,
         feePerYear: row.fee_per_year == null ? undefined : Number(row.fee_per_year),
-        carriedForward: row.carried_forward == null ? undefined : Number(row.carried_forward),
-        paidCarriedForward: row.paid_carried_forward == null ? undefined : Number(row.paid_carried_forward),
         image: row.image ?? undefined,
         parent: row.parent,
         phone: row.phone,
@@ -320,11 +328,19 @@ export function initializeStoreFromSupabase() {
       payments: (paymentsResult.data ?? []).map((row) => ({
         id: row.id,
         studentId: row.student_id,
-        term: row.term as Term,
         amount: Number(row.amount ?? 0),
         date: row.paid_at ?? row.date,
         method: row.method,
         ref: row.ref ?? undefined,
+      })),
+      feeLedger: (feeLedgerResult.data ?? []).map((row) => ({
+        id: row.id,
+        studentId: row.student_id,
+        type: row.type as "debit" | "credit",
+        description: row.description,
+        amount: Number(row.amount ?? 0),
+        date: row.date,
+        paymentId: row.payment_id ?? undefined,
       })),
       attendance: (attendanceResult.data ?? []).map((row) => ({
         id: row.id,
@@ -426,6 +442,7 @@ export function logout() {
     exams: [],
     marks: [],
     payments: [],
+    feeLedger: [],
     attendance: [],
     timetableEntries: [],
     currentUserId: null,
@@ -548,8 +565,6 @@ export async function addStudent(st: Omit<Student, "id" | "active">) {
     gender: item.gender,
     class_id: item.classId || null,
     fee_per_year: item.feePerYear ?? 0,
-    carried_forward: item.carriedForward ?? 0,
-    paid_carried_forward: item.paidCarriedForward ?? 0,
     image: item.image ?? null,
     parent: item.parent,
     phone: item.phone,
@@ -557,7 +572,34 @@ export async function addStudent(st: Omit<Student, "id" | "active">) {
     updated_at: new Date().toISOString(),
   });
   if (error) showSupabaseError("Creating student", error);
-  commit({ ...state, students: [...state.students, item] }, `Student "${st.name}" created`);
+
+  const cls = state.classes.find((c) => c.id === st.classId);
+  const annualFee = st.feePerYear ?? cls?.feePerYear ?? 0;
+
+  if (annualFee > 0) {
+    const now = new Date().toISOString();
+    const ledgerEntry: FeeLedgerEntry = {
+      id: uid(),
+      studentId: item.id,
+      type: "debit",
+      description: `${cls?.name ?? "Class"} annual fee`,
+      amount: annualFee,
+      date: now.slice(0, 10),
+    };
+    const { error: ledgerError } = await db.from("fee_ledger").insert({
+      id: ledgerEntry.id,
+      school_id: SCHOOL_ID,
+      student_id: ledgerEntry.studentId,
+      type: ledgerEntry.type,
+      description: ledgerEntry.description,
+      amount: ledgerEntry.amount,
+      date: ledgerEntry.date,
+    });
+    if (ledgerError) showSupabaseError("Creating fee ledger entry", ledgerError);
+    commit({ ...state, students: [...state.students, item], feeLedger: [...state.feeLedger, ledgerEntry] }, `Student "${st.name}" created`);
+  } else {
+    commit({ ...state, students: [...state.students, item] }, `Student "${st.name}" created`);
+  }
 }
 export async function updateStudent(id: ID, patch: Partial<Student>) {
   const db = requireSupabase();
@@ -567,8 +609,6 @@ export async function updateStudent(id: ID, patch: Partial<Student>) {
     ...(patch.gender !== undefined ? { gender: patch.gender } : {}),
     ...(patch.classId !== undefined ? { class_id: patch.classId || null } : {}),
     ...(patch.feePerYear !== undefined ? { fee_per_year: patch.feePerYear ?? null } : {}),
-    ...(patch.carriedForward !== undefined ? { carried_forward: patch.carriedForward ?? null } : {}),
-    ...(patch.paidCarriedForward !== undefined ? { paid_carried_forward: patch.paidCarriedForward ?? null } : {}),
     ...(patch.image !== undefined ? { image: patch.image ?? null } : {}),
     ...(patch.parent !== undefined ? { parent: patch.parent } : {}),
     ...(patch.phone !== undefined ? { phone: patch.phone } : {}),
@@ -589,6 +629,7 @@ export async function deleteStudent(id: ID) {
     students: state.students.filter((x) => x.id !== id),
     marks: state.marks.filter((m) => m.studentId !== id),
     payments: state.payments.filter((p) => p.studentId !== id),
+    feeLedger: state.feeLedger.filter((e) => e.studentId !== id),
     attendance: state.attendance.filter((a) => a.studentId !== id),
   }, `Student "${item?.name ?? "record"}" deleted`);
 }
@@ -599,56 +640,51 @@ export async function promoteStudents(studentIds: ID[], toClassId: ID) {
   if (!destClass) return;
 
   const now = new Date().toISOString();
-  type Update = { id: ID; classId: ID; feePerYear: number; carriedForward: number; paidCarriedForward: number };
-  const updates: Update[] = [];
+  const dateStr = now.slice(0, 10);
 
-  for (const sid of studentIds) {
-    const st = state.students.find((s) => s.id === sid);
-    if (!st) continue;
-    const oldClass = state.classes.find((c) => c.id === st.classId);
-    const oldYearly = st.feePerYear ?? oldClass?.feePerYear ?? 0;
-    const oldCarriedForward = st.carriedForward ?? 0;
-    const oldTotalExpected = oldYearly + oldCarriedForward;
-    const paidTotal = state.payments
-      .filter((p) => p.studentId === sid)
-      .reduce((sum, p) => sum + p.amount, 0);
-    const balance = Math.max(0, oldTotalExpected - paidTotal);
-    updates.push({
-      id: sid,
-      classId: toClassId,
-      feePerYear: destClass.feePerYear,
-      carriedForward: balance,
-      paidCarriedForward: paidTotal,
+  const entries: FeeLedgerEntry[] = [];
+  const nextStudents = state.students.map((s) => {
+    if (!studentIds.includes(s.id)) return s;
+    entries.push({
+      id: uid(),
+      studentId: s.id,
+      type: "debit",
+      description: `${destClass.name} annual fee`,
+      amount: destClass.feePerYear,
+      date: dateStr,
     });
-  }
+    return {
+      ...s,
+      classId: toClassId,
+    };
+  });
 
-  const results = await Promise.all(
-    updates.map((u) =>
-      db.from("students").update({
-        class_id: u.classId,
-        fee_per_year: u.feePerYear,
-        carried_forward: u.carriedForward,
-        paid_carried_forward: u.paidCarriedForward,
-        updated_at: now,
-      }).eq("id", u.id),
-    ),
+  if (entries.length === 0) return;
+
+  const dbInserts = entries.map((e) =>
+    db.from("fee_ledger").insert({
+      id: e.id,
+      school_id: SCHOOL_ID,
+      student_id: e.studentId,
+      type: e.type,
+      description: e.description,
+      amount: e.amount,
+      date: e.date,
+    }),
   );
-  const failed = results.find((r) => r.error);
+  const dbUpdates = studentIds.map((sid) =>
+    db.from("students").update({ class_id: toClassId, updated_at: now }).eq("id", sid),
+  );
+
+  const results = await Promise.all([...dbInserts, ...dbUpdates]);
+  const failed = results.find((r) => r?.error);
   if (failed?.error) showSupabaseError("Promoting students", failed.error);
 
-  const next = state.students.map((s) => {
-    const u = updates.find((x) => x.id === s.id);
-    return u
-      ? {
-          ...s,
-          classId: u.classId,
-          feePerYear: u.feePerYear,
-          carriedForward: u.carriedForward,
-          paidCarriedForward: u.paidCarriedForward,
-        }
-      : s;
-  });
-  commit({ ...state, students: next }, `${studentIds.length} student(s) promoted with balance carry-forward`);
+  commit({
+    ...state,
+    students: nextStudents,
+    feeLedger: [...state.feeLedger, ...entries],
+  }, `${studentIds.length} student(s) promoted to ${destClass.name}`);
 }
 
 // --- Exams ---
@@ -728,41 +764,101 @@ export async function addPayment(p: Omit<Payment, "id">) {
   const db = requireSupabase();
   const item = { ...p, id: uid() };
   const paidAt = item.date || new Date().toISOString();
+  const dateStr = paidAt.slice(0, 10);
   const { error } = await db.from("payments").insert({
     id: item.id,
     school_id: SCHOOL_ID,
     student_id: item.studentId,
-    term: item.term,
+    term: 1,
     amount: item.amount,
-    date: paidAt.slice(0, 10),
+    date: dateStr,
     paid_at: paidAt,
     method: item.method,
     ref: item.ref ?? null,
     updated_at: new Date().toISOString(),
   });
   if (error) showSupabaseError("Recording payment", error);
-  commit({ ...state, payments: [...state.payments, item] }, `Payment of ${formatKES(p.amount)} recorded`);
+
+  const ledgerEntry: FeeLedgerEntry = {
+    id: uid(),
+    studentId: item.studentId,
+    type: "credit",
+    description: `Payment${item.ref ? ` (${item.ref})` : ""} — ${item.method}`,
+    amount: item.amount,
+    date: dateStr,
+    paymentId: item.id,
+  };
+  const { error: ledgerError } = await db.from("fee_ledger").insert({
+    id: ledgerEntry.id,
+    school_id: SCHOOL_ID,
+    student_id: ledgerEntry.studentId,
+    type: ledgerEntry.type,
+    description: ledgerEntry.description,
+    amount: ledgerEntry.amount,
+    date: ledgerEntry.date,
+    payment_id: ledgerEntry.paymentId ?? null,
+  });
+  if (ledgerError) showSupabaseError("Creating fee ledger entry", ledgerError);
+
+  commit({ ...state, payments: [...state.payments, item], feeLedger: [...state.feeLedger, ledgerEntry] }, `Payment of ${formatKES(p.amount)} recorded`);
 }
 export async function updatePayment(id: ID, patch: Partial<Payment>) {
   const db = requireSupabase();
+  const now = new Date().toISOString();
   const dbPatch = {
     ...(patch.studentId !== undefined ? { student_id: patch.studentId } : {}),
-    ...(patch.term !== undefined ? { term: patch.term } : {}),
     ...(patch.amount !== undefined ? { amount: patch.amount } : {}),
     ...(patch.date !== undefined ? { date: patch.date.slice(0, 10), paid_at: patch.date } : {}),
     ...(patch.method !== undefined ? { method: patch.method } : {}),
     ...(patch.ref !== undefined ? { ref: patch.ref ?? null } : {}),
-    updated_at: new Date().toISOString(),
+    updated_at: now,
   };
   const { error } = await db.from("payments").update(dbPatch).eq("id", id);
   if (error) showSupabaseError("Updating payment", error);
-  commit({ ...state, payments: state.payments.map((p) => (p.id === id ? { ...p, ...patch } : p)) }, "Payment updated");
+
+  const existingLedger = state.feeLedger.find((e) => e.paymentId === id);
+  if (existingLedger) {
+    const newDesc = `Payment${patch.ref ? ` (${patch.ref})` : existingLedger.description.includes("(") ? "" : ""} — ${patch.method ?? existingLedger.description.split("—").pop()?.trim() ?? ""}`;
+    const desc = patch.method || patch.ref
+      ? `Payment${patch.ref ? ` (${patch.ref})` : ""} — ${patch.method ?? existingLedger.description.split("— ").pop() ?? ""}`
+      : existingLedger.description;
+    const ledgerPatch: Partial<FeeLedgerEntry> = {
+      ...(patch.amount !== undefined ? { amount: patch.amount } : {}),
+      ...(patch.date !== undefined ? { date: patch.date.slice(0, 10) } : {}),
+      ...(patch.method !== undefined || patch.ref !== undefined ? { description: desc } : {}),
+    };
+    await db.from("fee_ledger").update({
+      ...(ledgerPatch.amount !== undefined ? { amount: ledgerPatch.amount } : {}),
+      ...(ledgerPatch.date !== undefined ? { date: ledgerPatch.date } : {}),
+      ...(ledgerPatch.description !== undefined ? { description: ledgerPatch.description } : {}),
+    }).eq("id", existingLedger.id);
+    const nextLedger = state.feeLedger.map((e) =>
+      e.id === existingLedger.id ? { ...e, ...ledgerPatch } : e,
+    );
+    commit({
+      ...state,
+      payments: state.payments.map((p) => (p.id === id ? { ...p, ...patch } : p)),
+      feeLedger: nextLedger,
+    }, "Payment updated");
+  } else {
+    commit({ ...state, payments: state.payments.map((p) => (p.id === id ? { ...p, ...patch } : p)) }, "Payment updated");
+  }
 }
 export async function deletePayment(id: ID) {
   const db = requireSupabase();
   const { error } = await db.from("payments").delete().eq("id", id);
   if (error) showSupabaseError("Deleting payment", error);
-  commit({ ...state, payments: state.payments.filter((p) => p.id !== id) }, "Payment deleted");
+  const ledgerEntry = state.feeLedger.find((e) => e.paymentId === id);
+  if (ledgerEntry) {
+    await db.from("fee_ledger").delete().eq("id", ledgerEntry.id);
+    commit({
+      ...state,
+      payments: state.payments.filter((p) => p.id !== id),
+      feeLedger: state.feeLedger.filter((e) => e.id !== ledgerEntry.id),
+    }, "Payment deleted");
+  } else {
+    commit({ ...state, payments: state.payments.filter((p) => p.id !== id) }, "Payment deleted");
+  }
 }
 
 // --- School profile ---
@@ -915,47 +1011,57 @@ export function rankingForExam(examId: ID, classId?: ID) {
   return rows.map((r, i) => ({ ...r, rank: r.count ? i + 1 : 0 }));
 }
 
-export function feeStatusForStudent(studentId: ID) {
-  const s = state;
-  const st = s.students.find((x) => x.id === studentId);
+export function studentFeeLedger(studentId: ID) {
+  const st = state.students.find((x) => x.id === studentId);
   if (!st) return null;
-  const cls = s.classes.find((c) => c.id === st.classId);
-  const classFee = cls?.feePerYear ?? 0;
-  const carriedForward = st.carriedForward ?? 0;
-  const yearly = st.feePerYear ?? classFee;
-  const expectedTotal = yearly + carriedForward;
-  const perTerm = yearly / 3;
-  const byTerm: Record<Term, number> = { 1: 0, 2: 0, 3: 0 };
-  for (const p of s.payments.filter((p) => p.studentId === studentId)) {
-    byTerm[p.term] = (byTerm[p.term] ?? 0) + p.amount;
-  }
-  const allPaymentsTotal = byTerm[1] + byTerm[2] + byTerm[3];
-  const paidCarriedForward = st.paidCarriedForward ?? 0;
-  const paidTotal = Math.max(0, allPaymentsTotal - paidCarriedForward);
-  const balanceTotal = expectedTotal - paidTotal;
-  const hasCustomFee = st.feePerYear != null && st.feePerYear > 0 && st.feePerYear !== cls?.feePerYear;
-  const expectedByTerm: Record<Term, number> = hasCustomFee
-    ? { 1: perTerm, 2: perTerm, 3: perTerm }
-    : {
-        1: cls?.feeTerm1 ?? perTerm,
-        2: cls?.feeTerm2 ?? perTerm,
-        3: cls?.feeTerm3 ?? perTerm,
-      };
+  const cls = state.classes.find((c) => c.id === st.classId);
+  const entries = state.feeLedger
+    .filter((e) => e.studentId === studentId)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const totalDebit = entries.reduce((s, e) => (e.type === "debit" ? s + e.amount : s), 0);
+  const totalCredit = entries.reduce((s, e) => (e.type === "credit" ? s + e.amount : s), 0);
+  const balance = totalDebit - totalCredit;
   return {
     student: st,
     class: cls,
-    byTerm,
-    expectedByTerm,
-    perTerm,
-    yearly,
-    classFee,
-    carriedForward,
-    paidTotal,
-    balanceTotal,
-    balanceOwing: Math.max(0, balanceTotal),
-    balanceCredit: Math.max(0, -balanceTotal),
-    allPaymentsTotal,
+    entries,
+    totalDebit,
+    totalCredit,
+    balance,
+    balanceOwing: Math.max(0, balance),
+    balanceCredit: Math.max(0, -balance),
   };
+}
+
+// --- Fee Ledger ---
+export async function addFeeLedgerEntry(e: { studentId: ID; type: "debit" | "credit"; description: string; amount: number; date?: string }) {
+  const db = requireSupabase();
+  const item: FeeLedgerEntry = {
+    id: uid(),
+    studentId: e.studentId,
+    type: e.type,
+    description: e.description,
+    amount: e.amount,
+    date: e.date ?? new Date().toISOString().slice(0, 10),
+  };
+  const { error } = await db.from("fee_ledger").insert({
+    id: item.id,
+    school_id: SCHOOL_ID,
+    student_id: item.studentId,
+    type: item.type,
+    description: item.description,
+    amount: item.amount,
+    date: item.date,
+  });
+  if (error) showSupabaseError("Adding fee ledger entry", error);
+  commit({ ...state, feeLedger: [...state.feeLedger, item] }, `${e.type === "debit" ? "Debit" : "Credit"} entry added`);
+}
+
+export async function deleteFeeLedgerEntry(id: ID) {
+  const db = requireSupabase();
+  const { error } = await db.from("fee_ledger").delete().eq("id", id);
+  if (error) showSupabaseError("Deleting fee ledger entry", error);
+  commit({ ...state, feeLedger: state.feeLedger.filter((e) => e.id !== id) }, "Fee ledger entry deleted");
 }
 
 export const formatKES = (n: number) =>

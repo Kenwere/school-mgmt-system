@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Edit3, Printer, Search, Trash2, Wallet } from "lucide-react";
-import { addPayment, deletePayment, feeStatusForStudent, formatKES, updatePayment, useStore, type Payment, type Term } from "@/lib/store";
+import { addPayment, deletePayment, studentFeeLedger, formatKES, updatePayment, useStore, type Payment } from "@/lib/store";
 
 export const Route = createFileRoute("/fees")({
   head: () => ({ meta: [{ title: "Fees — School Management" }] }),
@@ -29,7 +29,6 @@ function FeesPage() {
   const [open, setOpen] = useState(false);
   const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
   const [studentId, setStudentId] = useState("");
-  const [term, setTerm] = useState<Term>(1);
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState("M-Pesa");
   const [ref, setRef] = useState("");
@@ -44,10 +43,10 @@ function FeesPage() {
     return true;
   });
   const selectedStudent = store.students.find((x) => x.id === studentId);
-  const selectedFee = studentId ? feeStatusForStudent(studentId) : null;
+  const selectedFee = studentId ? studentFeeLedger(studentId) : null;
   const receiptPayment = store.payments.find((payment) => payment.id === receiptPaymentId) ?? null;
   const receiptStudent = receiptPayment ? store.students.find((student) => student.id === receiptPayment.studentId) ?? null : null;
-  const receiptFee = receiptPayment ? feeStatusForStudent(receiptPayment.studentId) : null;
+  const receiptFee = receiptPayment ? studentFeeLedger(receiptPayment.studentId) : null;
   const receiptClass = receiptFee?.class ?? null;
 
   const openFor = (sid: string) => {
@@ -55,7 +54,6 @@ function FeesPage() {
     setStudentId(sid);
     setAmount("");
     setRef("");
-    setTerm(1);
     setDate(toDateTimeLocal(new Date()));
     setOpen(true);
   };
@@ -63,7 +61,6 @@ function FeesPage() {
   const openEditPayment = (payment: Payment) => {
     setEditingPaymentId(payment.id);
     setStudentId(payment.studentId);
-    setTerm(payment.term);
     setAmount(String(payment.amount));
     setMethod(payment.method);
     setRef(payment.ref ?? "");
@@ -76,7 +73,6 @@ function FeesPage() {
     const amt = Number(amount) || 0;
     const payload = {
       studentId,
-      term,
       amount: amt,
       method,
       ref: ref.trim() || undefined,
@@ -98,10 +94,10 @@ function FeesPage() {
 
   const totals = classFilter ? students.reduce(
     (acc, st) => {
-      const f = feeStatusForStudent(st.id);
+      const f = studentFeeLedger(st.id);
       if (!f) return acc;
-      acc.expected += f.yearly + f.carriedForward;
-      acc.paid += f.paidTotal;
+      acc.expected += f.totalDebit;
+      acc.paid += f.totalCredit;
       return acc;
     },
     { expected: 0, paid: 0 },
@@ -147,7 +143,7 @@ function FeesPage() {
       `}</style>
       <PageHeader
         title="Fees"
-        description="Each class fee is split into 3 terms automatically. Record payments per term."
+        description="Record payments per student. Fee debits are added per class annually."
         actions={
           <>
             <div className="relative">
@@ -187,34 +183,28 @@ function FeesPage() {
                 <TableRow>
                   <TableHead>Student</TableHead>
                   <TableHead>Class</TableHead>
-                  <TableHead className="text-right">Annual fee</TableHead>
-                  <TableHead className="text-right">Per term</TableHead>
-                  <TableHead className="text-right">T1 paid</TableHead>
-                  <TableHead className="text-right">T2 paid</TableHead>
-                  <TableHead className="text-right">T3 paid</TableHead>
+                  <TableHead className="text-right">Total debited</TableHead>
+                  <TableHead className="text-right">Total paid</TableHead>
                   <TableHead className="text-right">Balance</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {!classFilter && (
-                  <TableRow><TableCell colSpan={9} className="text-center text-sm text-muted-foreground py-10">Select a class to view fee records.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-10">Select a class to view fee records.</TableCell></TableRow>
                 )}
                 {classFilter && students.length === 0 && (
-                  <TableRow><TableCell colSpan={9} className="text-center text-sm text-muted-foreground py-10">No students in this class.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-10">No students in this class.</TableCell></TableRow>
                 )}
                 {students.map((st) => {
-                  const f = feeStatusForStudent(st.id);
+                  const f = studentFeeLedger(st.id);
                   if (!f) return null;
                   return (
                     <TableRow key={st.id}>
                       <TableCell className="font-medium">{st.name}<div className="text-xs text-muted-foreground">{st.admissionNo}</div></TableCell>
                       <TableCell>{f.class?.name ?? "—"}</TableCell>
-                      <TableCell className="text-right tabular-nums">{formatKES(f.yearly)}</TableCell>
-                      <TableCell className="text-right tabular-nums">{formatKES(f.perTerm)}</TableCell>
-                      <TableCell className="text-right tabular-nums">{formatKES(f.byTerm[1])}</TableCell>
-                      <TableCell className="text-right tabular-nums">{formatKES(f.byTerm[2])}</TableCell>
-                      <TableCell className="text-right tabular-nums">{formatKES(f.byTerm[3])}</TableCell>
+                      <TableCell className="text-right tabular-nums">{formatKES(f.totalDebit)}</TableCell>
+                      <TableCell className="text-right tabular-nums">{formatKES(f.totalCredit)}</TableCell>
                       <TableCell className="text-right tabular-nums">
                         {f.balanceCredit > 0 ? (
                           <Badge className="bg-success/15 text-success border-success/30" variant="outline">Credit {formatKES(f.balanceCredit)}</Badge>
@@ -245,7 +235,6 @@ function FeesPage() {
                 <TableRow>
                   <TableHead>Date</TableHead>
                   <TableHead>Student</TableHead>
-                  <TableHead>Term</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
                   <TableHead>Method</TableHead>
                   <TableHead>Ref</TableHead>
@@ -254,7 +243,7 @@ function FeesPage() {
               </TableHeader>
               <TableBody>
                 {store.payments.length === 0 && (
-                  <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-6">No payments recorded.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-6">No payments recorded.</TableCell></TableRow>
                 )}
                 {[...store.payments].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 30).map((p) => {
                   const s = store.students.find((x) => x.id === p.studentId);
@@ -262,7 +251,6 @@ function FeesPage() {
                     <TableRow key={p.id}>
                         <TableCell>{new Date(p.date).toLocaleString()}</TableCell>
                       <TableCell>{s?.name ?? "—"}</TableCell>
-                      <TableCell><Badge variant="outline">Term {p.term}</Badge></TableCell>
                       <TableCell className="text-right tabular-nums">{formatKES(p.amount)}</TableCell>
                       <TableCell>{p.method}</TableCell>
                       <TableCell className="font-mono text-xs">{p.ref ?? "—"}</TableCell>
@@ -294,23 +282,12 @@ function FeesPage() {
           </DialogHeader>
           {selectedFee && (
             <div className="grid gap-3 rounded-md border p-3 text-sm sm:grid-cols-3">
-              <div><div className="text-xs text-muted-foreground">Expected</div><div className="font-medium">{formatKES(selectedFee.expectedByTerm[term])}</div></div>
-              <div><div className="text-xs text-muted-foreground">Paid this term</div><div className="font-medium">{formatKES(selectedFee.byTerm[term])}</div></div>
-              <div><div className="text-xs text-muted-foreground">Balance</div><div className="font-medium">{formatKES(Math.max(0, selectedFee.expectedByTerm[term] - selectedFee.byTerm[term]))}</div></div>
+              <div><div className="text-xs text-muted-foreground">Total debited</div><div className="font-medium">{formatKES(selectedFee.totalDebit)}</div></div>
+              <div><div className="text-xs text-muted-foreground">Total paid</div><div className="font-medium">{formatKES(selectedFee.totalCredit)}</div></div>
+              <div><div className="text-xs text-muted-foreground">Balance</div><div className="font-medium">{formatKES(selectedFee.balanceOwing)}</div></div>
             </div>
           )}
           <div className="grid gap-4 py-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Term</Label>
-              <Select value={String(term)} onValueChange={(v) => setTerm(Number(v) as Term)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">Term 1</SelectItem>
-                  <SelectItem value="2">Term 2</SelectItem>
-                  <SelectItem value="3">Term 3</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
             <div className="space-y-2"><Label>Amount (KES)</Label><Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} /></div>
             <div className="space-y-2">
               <Label>Method</Label>
@@ -350,8 +327,8 @@ function FeesPage() {
           student={receiptStudent}
           classNameValue={receiptClass?.name ?? "-"}
           payment={receiptPayment}
-          amountExpected={receiptFee.expectedByTerm[receiptPayment.term] ?? 0}
-          balance={Math.max(0, receiptFee.balanceTotal)}
+          amountExpected={receiptFee.totalDebit}
+          balance={Math.max(0, receiptFee.balance)}
         />
       )}
     </>
@@ -397,8 +374,7 @@ function PaymentReceipt({
         <ReceiptLine label="Student name" value={student.name} />
         <ReceiptLine label="Admission number" value={student.admissionNo} />
         <ReceiptLine label="Class" value={classNameValue} />
-        <ReceiptLine label="Term" value={`Term ${payment.term}`} />
-        <ReceiptLine label="Amount expected" value={formatKES(amountExpected)} />
+        <ReceiptLine label="Total fee charged" value={formatKES(amountExpected)} />
         <ReceiptLine label="Amount paid" value={formatKES(payment.amount)} />
         <ReceiptLine label="Balance" value={formatKES(balance)} />
         <ReceiptLine label="Payment method" value={payment.method} />

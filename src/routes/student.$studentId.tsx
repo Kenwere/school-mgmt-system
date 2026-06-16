@@ -1,14 +1,18 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { ArrowLeft, Printer, Wallet, TrendingUp, AlertCircle, CheckCircle2, GraduationCap, Phone, Mail, Users, Hash, User2, Ban, CheckCircle } from "lucide-react";
+import { ArrowLeft, Printer, Wallet, TrendingUp, AlertCircle, CheckCircle2, GraduationCap, Phone, Mail, Users, Hash, User2, Ban, CheckCircle, Plus, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { PermissionGate } from "@/components/permission-gate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { feeStatusForStudent, formatKES, updateStudent, useStore, type Term } from "@/lib/store";
+import { studentFeeLedger, formatKES, updateStudent, addFeeLedgerEntry, deleteFeeLedgerEntry, useStore } from "@/lib/store";
 
 type LedgerEntry = {
   id: string;
@@ -32,10 +36,13 @@ function StudentDetailPage() {
   const { studentId } = Route.useParams();
   const store = useStore();
   const student = store.students.find((s) => s.id === studentId);
-  const fee = feeStatusForStudent(studentId);
-  const payments = store.payments
-    .filter((p) => p.studentId === studentId)
-    .sort((a, b) => b.date.localeCompare(a.date));
+  const fee = studentFeeLedger(studentId);
+
+  const [ledgerOpen, setLedgerOpen] = useState(false);
+  const [ledgerType, setLedgerType] = useState<"debit" | "credit">("debit");
+  const [ledgerDesc, setLedgerDesc] = useState("");
+  const [ledgerAmount, setLedgerAmount] = useState("");
+  const [ledgerDate, setLedgerDate] = useState(new Date().toISOString().slice(0, 10));
 
   if (!student || !fee) {
     return (
@@ -58,53 +65,21 @@ function StudentDetailPage() {
     }
   };
 
-  const ledgerEntries = useMemo(() => {
+  const ledgerEntries: LedgerEntry[] = useMemo(() => {
     const entries: LedgerEntry[] = [];
     let running = 0;
-
-    if (fee.carriedForward > 0) {
-      running += fee.carriedForward;
+    for (const e of fee.entries) {
+      if (e.type === "debit") running += e.amount;
+      else running -= e.amount;
       entries.push({
-        id: "cf",
-        date: "Previous year",
-        description: "Balance carried forward",
-        debit: fee.carriedForward,
-        credit: 0,
+        id: e.id,
+        date: new Date(e.date).toLocaleDateString(),
+        description: e.description,
+        debit: e.type === "debit" ? e.amount : 0,
+        credit: e.type === "credit" ? e.amount : 0,
         balance: running,
       });
     }
-
-    for (const term of [1, 2, 3] as Term[]) {
-      const expected = fee.expectedByTerm[term] ?? 0;
-      if (expected <= 0) continue;
-
-      running += expected;
-      entries.push({
-        id: `fee-t${term}`,
-        date: `Term ${term}`,
-        description: `Term ${term} school fees`,
-        debit: expected,
-        credit: 0,
-        balance: running,
-      });
-
-      const termPayments = payments
-        .filter((p) => p.term === term)
-        .sort((a, b) => a.date.localeCompare(b.date));
-
-      for (const payment of termPayments) {
-        running -= payment.amount;
-        entries.push({
-          id: payment.id,
-          date: new Date(payment.date).toLocaleDateString(),
-          description: `Payment${payment.ref ? ` (${payment.ref})` : ""} — ${payment.method}`,
-          debit: 0,
-          credit: payment.amount,
-          balance: running,
-        });
-      }
-    }
-
     if (entries.length === 0) {
       entries.push({
         id: "empty",
@@ -115,13 +90,26 @@ function StudentDetailPage() {
         balance: 0,
       });
     }
-
     return entries;
-  }, [fee, payments]);
+  }, [fee.entries]);
 
-  const totalDebit = ledgerEntries.reduce((s, e) => s + e.debit, 0);
-  const totalCredit = ledgerEntries.reduce((s, e) => s + e.credit, 0);
-  const closingBalance = ledgerEntries.length > 0 ? ledgerEntries[ledgerEntries.length - 1].balance : 0;
+  const addLedger = async () => {
+    if (!ledgerDesc || !ledgerAmount) return;
+    await addFeeLedgerEntry({
+      studentId,
+      type: ledgerType,
+      description: ledgerDesc,
+      amount: Number(ledgerAmount) || 0,
+      date: ledgerDate,
+    });
+    setLedgerOpen(false);
+    setLedgerDesc("");
+    setLedgerAmount("");
+  };
+
+  const totalDebit = fee.totalDebit;
+  const totalCredit = fee.totalCredit;
+  const closingBalance = fee.balance;
 
   const examProgress = useMemo(() => {
     const sorted = [...store.exams].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -249,8 +237,8 @@ function StudentDetailPage() {
                   <Wallet className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Expected</p>
-                  <p className="text-lg font-bold">{formatKES(fee.yearly)}</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Total debited</p>
+                  <p className="text-lg font-bold">{formatKES(fee.totalDebit)}</p>
                 </div>
               </CardContent>
             </Card>
@@ -260,8 +248,8 @@ function StudentDetailPage() {
                   <TrendingUp className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Paid</p>
-                  <p className="text-lg font-bold text-success">{formatKES(fee.paidTotal)}</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Total paid</p>
+                  <p className="text-lg font-bold text-success">{formatKES(fee.totalCredit)}</p>
                 </div>
               </CardContent>
             </Card>
@@ -300,19 +288,6 @@ function StudentDetailPage() {
                   <div>
                     <p className="text-xs text-muted-foreground uppercase tracking-wide">Balance</p>
                     <p className="text-lg font-bold text-success">Cleared</p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-            {fee.carriedForward > 0 && (
-              <Card className="flex-1 min-w-[180px]">
-                <CardContent className="flex items-center gap-4 p-5">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-warning/10 text-warning-foreground shrink-0">
-                    <TrendingUp className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Carried forward</p>
-                    <p className="text-lg font-bold text-warning-foreground">{formatKES(fee.carriedForward)}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -375,10 +350,15 @@ function StudentDetailPage() {
                   <CardTitle className="text-base flex items-center gap-2">
                     <Wallet className="h-4 w-4 text-muted-foreground" /> Fee Record
                   </CardTitle>
-                  <div className="hidden md:flex items-center gap-6 text-xs text-muted-foreground">
-                    <span>Total debit: <strong className="text-foreground">{formatKES(totalDebit)}</strong></span>
-                    <span>Total credit: <strong className="text-foreground">{formatKES(totalCredit)}</strong></span>
-                    <span>Balance: <strong className={closingBalance > 0 ? "text-destructive" : "text-success"}>{formatKES(closingBalance)}</strong></span>
+                  <div className="flex items-center gap-3">
+                    <div className="hidden md:flex items-center gap-6 text-xs text-muted-foreground">
+                      <span>Total debit: <strong className="text-foreground">{formatKES(totalDebit)}</strong></span>
+                      <span>Total credit: <strong className="text-foreground">{formatKES(totalCredit)}</strong></span>
+                      <span>Balance: <strong className={closingBalance > 0 ? "text-destructive" : "text-success"}>{formatKES(closingBalance)}</strong></span>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={() => setLedgerOpen(true)} className="print-hide">
+                      <Plus className="h-4 w-4" /> Add entry
+                    </Button>
                   </div>
                 </div>
               </CardHeader>
@@ -391,26 +371,21 @@ function StudentDetailPage() {
                       <TableHead className="text-right w-28">Debit (KES)</TableHead>
                       <TableHead className="text-right w-28">Credit (KES)</TableHead>
                       <TableHead className="text-right w-28">Balance (KES)</TableHead>
+                      <TableHead className="w-10 print-hide"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {ledgerEntries.length === 1 && ledgerEntries[0].id === "empty" ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground">
+                        <TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">
                           No fee records.
                         </TableCell>
                       </TableRow>
                     ) : (
-                      ledgerEntries.map((entry, i) => (
+                      ledgerEntries.map((entry) => (
                         <TableRow
                           key={entry.id}
-                          className={
-                            entry.id === "cf"
-                              ? "bg-warning/5"
-                              : entry.debit > 0
-                                ? "bg-muted/30"
-                                : ""
-                          }
+                          className={entry.debit > 0 ? "bg-muted/30" : ""}
                         >
                           <TableCell className="text-xs text-muted-foreground">{entry.date}</TableCell>
                           <TableCell className="text-sm">{entry.description}</TableCell>
@@ -427,6 +402,19 @@ function StudentDetailPage() {
                               <span className="text-success">{formatKES(Math.abs(entry.balance))} CR</span>
                             ) : (
                               <span className="text-success">Cleared</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="print-hide">
+                            {entry.id !== "empty" && (
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={async () => {
+                                  if (confirm("Delete this entry?")) await deleteFeeLedgerEntry(entry.id);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
                             )}
                           </TableCell>
                         </TableRow>
@@ -446,6 +434,7 @@ function StudentDetailPage() {
                             <span className="text-success">Cleared</span>
                           )}
                         </TableCell>
+                        <TableCell></TableCell>
                       </TableRow>
                     )}
                   </TableBody>
@@ -453,6 +442,42 @@ function StudentDetailPage() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Add ledger entry dialog */}
+          <Dialog open={ledgerOpen} onOpenChange={setLedgerOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add fee ledger entry</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                  <Label>Type</Label>
+                  <Select value={ledgerType} onValueChange={(v) => setLedgerType(v as "debit" | "credit")}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="debit">Debit (fee charged)</SelectItem>
+                      <SelectItem value="credit">Credit (payment)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Description</Label>
+                  <Input value={ledgerDesc} onChange={(e) => setLedgerDesc(e.target.value)} placeholder={ledgerType === "debit" ? "e.g. Class 5 annual fee" : "e.g. Payment — M-Pesa"} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Amount (KES)</Label>
+                  <Input type="number" value={ledgerAmount} onChange={(e) => setLedgerAmount(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Date</Label>
+                  <Input type="date" value={ledgerDate} onChange={(e) => setLedgerDate(e.target.value)} />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button onClick={addLedger}>Add entry</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           {/* Exam Progress */}
           {examProgress.length > 0 && (

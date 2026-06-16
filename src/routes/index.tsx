@@ -36,7 +36,7 @@ import { StatCard } from "@/components/stat-card";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
-import { formatKES, feeStatusForStudent, useStore } from "@/lib/store";
+import { formatKES, studentFeeLedger, useStore } from "@/lib/store";
 
 export const Route = createFileRoute("/")({
   head: () => ({ meta: [{ title: "School Management System" }] }),
@@ -392,10 +392,10 @@ function Dashboard() {
 
   const feeAgg = activeStudents.reduce(
     (acc, st) => {
-      const fs = feeStatusForStudent(st.id);
+      const fs = studentFeeLedger(st.id);
       if (!fs) return acc;
-      acc.paid += fs.paidTotal;
-      acc.balance += Math.max(0, fs.balanceTotal);
+      acc.paid += fs.totalCredit;
+      acc.balance += Math.max(0, fs.balance);
       return acc;
     },
     { paid: 0, balance: 0 },
