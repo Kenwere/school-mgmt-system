@@ -117,15 +117,13 @@ function Landing() {
             <Button variant="ghost" size="sm" onClick={() => router.navigate({ to: "/login" })}>
               Sign in
             </Button>
-            {!hasSchool && (
-              <Button
-                size="sm"
-                className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20"
-                onClick={() => router.navigate({ to: "/register" })}
-              >
-                Get started
-              </Button>
-            )}
+            <Button
+              size="sm"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20"
+              onClick={() => router.navigate({ to: hasSchool ? "/login" : "/register" })}
+            >
+              Get started
+            </Button>
           </div>
         </div>
       </header>
@@ -157,23 +155,13 @@ function Landing() {
                 and track termly fee balances — all in one calm, printable workspace.
               </p>
               <div className="mt-10 flex flex-wrap items-center gap-4">
-                {hasSchool ? (
-                  <Button
-                    size="lg"
-                    className="h-13 bg-accent px-8 text-accent-foreground text-base hover:bg-accent/90 shadow-xl shadow-accent/25"
-                    onClick={() => router.navigate({ to: "/login" })}
-                  >
-                    Sign in to {schoolName} <ChevronRight className="h-4 w-4 ml-1" />
-                  </Button>
-                ) : (
-                  <Button
-                    size="lg"
-                    className="h-13 bg-accent px-8 text-accent-foreground text-base hover:bg-accent/90 shadow-xl shadow-accent/25"
-                    onClick={() => router.navigate({ to: "/register" })}
-                  >
-                    Start free trial <ChevronRight className="h-4 w-4 ml-1" />
-                  </Button>
-                )}
+                <Button
+                  size="lg"
+                  className="h-13 bg-accent px-8 text-accent-foreground text-base hover:bg-accent/90 shadow-xl shadow-accent/25"
+                  onClick={() => router.navigate({ to: hasSchool ? "/login" : "/register" })}
+                >
+                  Start free trial <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
                 <Button
                   size="lg"
                   variant="outline"
