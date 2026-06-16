@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Edit3, Plus, Trash2 } from "lucide-react";
-import { addExam, deleteExam, updateExam, useStore, type Exam, type Term } from "@/lib/store";
+import { addExam, deleteExam, updateExam, useStore, type Exam, type Term, type ID } from "@/lib/store";
 
 export const Route = createFileRoute("/exams")({
   head: () => ({ meta: [{ title: "Exams — School Management" }] }),
@@ -30,6 +30,7 @@ function ExamsPage() {
   const [term, setTerm] = useState<Term>(1);
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [date, setDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [classId, setClassId] = useState<ID>("");
 
   const openCreate = () => {
     setEditingId(null);
@@ -37,6 +38,7 @@ function ExamsPage() {
     setTerm(1);
     setYear(new Date().getFullYear());
     setDate(new Date().toISOString().slice(0, 10));
+    setClassId("");
     setOpen(true);
   };
 
@@ -46,12 +48,13 @@ function ExamsPage() {
     setTerm(exam.term);
     setYear(exam.year);
     setDate(exam.date);
+    setClassId(exam.classId ?? "");
     setOpen(true);
   };
 
   const save = () => {
     if (!name.trim()) return;
-    const payload = { name: name.trim(), term, year, date };
+    const payload: Omit<Exam, "id"> = { name: name.trim(), term, year, date, classId: classId || undefined };
     if (editingId) {
       updateExam(editingId, payload);
     } else {
@@ -92,6 +95,18 @@ function ExamsPage() {
                 </div>
                 <div className="space-y-2"><Label>Year</Label><Input type="number" value={year} onChange={(e) => setYear(Number(e.target.value))} /></div>
                 <div className="space-y-2 sm:col-span-2"><Label>Date</Label><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>Class (optional)</Label>
+                  <Select value={classId} onValueChange={setClassId}>
+                    <SelectTrigger><SelectValue placeholder="All classes" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">All classes</SelectItem>
+                      {store.classes.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <DialogFooter><Button onClick={save}>{editingId ? "Save" : "Create"}</Button></DialogFooter>
             </DialogContent>
@@ -108,12 +123,13 @@ function ExamsPage() {
                   <TableHead>Term</TableHead>
                   <TableHead>Year</TableHead>
                   <TableHead>Date</TableHead>
+                  <TableHead>Class</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {store.exams.length === 0 && (
-                  <TableRow><TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-10">No exams yet.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-10">No exams yet.</TableCell></TableRow>
                 )}
                 {[...store.exams].sort((a, b) => b.date.localeCompare(a.date)).map((e) => (
                   <TableRow key={e.id}>
@@ -121,6 +137,7 @@ function ExamsPage() {
                     <TableCell><Badge variant="outline">Term {e.term}</Badge></TableCell>
                     <TableCell>{e.year}</TableCell>
                     <TableCell>{e.date}</TableCell>
+                    <TableCell>{e.classId ? store.classes.find((c) => c.id === e.classId)?.name ?? "—" : "All classes"}</TableCell>
                     <TableCell className="text-right">
                       <Button size="icon" variant="ghost" onClick={() => openEdit(e)}>
                         <Edit3 className="h-4 w-4" />

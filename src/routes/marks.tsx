@@ -22,7 +22,19 @@ export const Route = createFileRoute("/marks")({
 function MarksPage() {
   const store = useStore();
   const [examId, setExamId] = useState<string>(store.exams[0]?.id ?? "");
-  const [classId, setClassId] = useState<string>(store.classes[0]?.id ?? "");
+
+  const selectedExam = store.exams.find((e) => e.id === examId);
+  const lockedClassId = selectedExam?.classId;
+  const [freeClassId, setFreeClassId] = useState<string>(store.classes[0]?.id ?? "");
+  const classId = lockedClassId ?? freeClassId;
+
+  const handleExamChange = (id: string) => {
+    setExamId(id);
+    const exam = store.exams.find((e) => e.id === id);
+    if (exam?.classId) {
+      setFreeClassId(exam.classId);
+    }
+  };
 
   const cls = store.classes.find((c) => c.id === classId);
   const subjects = cls?.subjects ?? [];
@@ -63,18 +75,21 @@ function MarksPage() {
           <CardContent className="grid gap-4 p-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Exam</Label>
-              <Select value={examId} onValueChange={setExamId}>
+              <Select value={examId} onValueChange={handleExamChange}>
                 <SelectTrigger><SelectValue placeholder="Select an exam" /></SelectTrigger>
                 <SelectContent>
                   {store.exams.map((e) => (
-                    <SelectItem key={e.id} value={e.id}>{e.name} — Term {e.term} {e.year}</SelectItem>
+                    <SelectItem key={e.id} value={e.id}>
+                      {e.name} — Term {e.term} {e.year}
+                      {e.classId ? ` — ${store.classes.find((c) => c.id === e.classId)?.name ?? ""}` : ""}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
               <Label>Class</Label>
-              <Select value={classId} onValueChange={setClassId}>
+              <Select value={classId} onValueChange={setFreeClassId} disabled={!!lockedClassId}>
                 <SelectTrigger><SelectValue placeholder="Select a class" /></SelectTrigger>
                 <SelectContent>
                   {store.classes.map((c) => (
@@ -82,6 +97,7 @@ function MarksPage() {
                   ))}
                 </SelectContent>
               </Select>
+              {lockedClassId && <p className="text-xs text-muted-foreground">Class is locked by the selected exam.</p>}
             </div>
           </CardContent>
         </Card>

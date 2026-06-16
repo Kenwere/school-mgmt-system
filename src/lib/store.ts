@@ -58,6 +58,7 @@ export type Exam = {
   term: Term;
   year: number;
   date: string;
+  classId?: ID;
 };
 
 export type Mark = {
@@ -307,6 +308,7 @@ export function initializeStoreFromSupabase() {
         term: row.term as Term,
         year: row.year,
         date: row.date,
+        classId: row.class_id ?? undefined,
       })),
       marks: (marksResult.data ?? []).map((row) => ({
         id: row.id,
@@ -660,6 +662,7 @@ export async function addExam(e: Omit<Exam, "id">) {
     term: item.term,
     year: item.year,
     date: item.date,
+    class_id: item.classId ?? null,
     updated_at: new Date().toISOString(),
   });
   if (error) showSupabaseError("Creating exam", error);
@@ -672,6 +675,7 @@ export async function updateExam(id: ID, patch: Partial<Exam>) {
     ...(patch.term !== undefined ? { term: patch.term } : {}),
     ...(patch.year !== undefined ? { year: patch.year } : {}),
     ...(patch.date !== undefined ? { date: patch.date } : {}),
+    ...(patch.classId !== undefined ? { class_id: patch.classId ?? null } : {}),
     updated_at: new Date().toISOString(),
   };
   const { error } = await db.from("exams").update(dbPatch).eq("id", id);
