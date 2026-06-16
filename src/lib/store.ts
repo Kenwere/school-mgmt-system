@@ -416,7 +416,18 @@ export function login(email: string, password: string): User | null {
 
 export function logout() {
   saveUserId(null);
-  commit({ ...state, currentUserId: null });
+  commit({
+    school: null,
+    users: [],
+    classes: [],
+    students: [],
+    exams: [],
+    marks: [],
+    payments: [],
+    attendance: [],
+    timetableEntries: [],
+    currentUserId: null,
+  });
 }
 
 export function currentUser(): User | null {
