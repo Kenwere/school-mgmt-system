@@ -10,6 +10,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { feeStatusForStudent, formatKES, useStore, type Term } from "@/lib/store";
 
+type LedgerEntry = {
+  id: string;
+  date: string;
+  description: string;
+  debit: number;
+  credit: number;
+  balance: number;
+};
+
 export const Route = createFileRoute("/student/$studentId")({
   head: () => ({ meta: [{ title: "Student profile" }] }),
   component: () => (
@@ -37,9 +46,71 @@ function StudentDetailPage() {
     );
   }
 
-  const expectedFor = (term: Term) => fee.expectedByTerm[term] ?? 0;
-  const paidFor = (term: Term) => payments.filter((p) => p.term === term).reduce((sum, p) => sum + p.amount, 0);
   const isCleared = fee.balanceOwing <= 0;
+
+  const ledgerEntries = useMemo(() => {
+    const entries: LedgerEntry[] = [];
+    let running = fee.carriedForward;
+
+    if (fee.carriedForward > 0) {
+      entries.push({
+        id: "cf",
+        date: "Previous year",
+        description: "Balance carried forward",
+        debit: fee.carriedForward,
+        credit: 0,
+        balance: running,
+      });
+    }
+
+    for (const term of [1, 2, 3] as Term[]) {
+      const expected = fee.expectedByTerm[term] ?? 0;
+      if (expected <= 0) continue;
+
+      running += expected;
+      entries.push({
+        id: `fee-t${term}`,
+        date: `Term ${term}`,
+        description: `Term ${term} school fees`,
+        debit: expected,
+        credit: 0,
+        balance: running,
+      });
+
+      const termPayments = payments
+        .filter((p) => p.term === term)
+        .sort((a, b) => a.date.localeCompare(b.date));
+
+      for (const payment of termPayments) {
+        running -= payment.amount;
+        entries.push({
+          id: payment.id,
+          date: new Date(payment.date).toLocaleDateString(),
+          description: `Payment${payment.ref ? ` (${payment.ref})` : ""} — ${payment.method}`,
+          debit: 0,
+          credit: payment.amount,
+          balance: running,
+        });
+      }
+    }
+
+    if (entries.length === 0) {
+      entries.push({
+        id: "empty",
+        date: "",
+        description: "No fee records",
+        debit: 0,
+        credit: 0,
+        balance: 0,
+      });
+    }
+
+    return entries;
+  }, [fee, payments]);
+
+  const totalDebit = ledgerEntries.reduce((s, e) => s + e.debit, 0);
+  const totalCredit = ledgerEntries.reduce((s, e) => s + e.credit, 0);
+  const closingBalance = ledgerEntries.length > 0 ? ledgerEntries[ledgerEntries.length - 1].balance : 0;
 
   const examProgress = useMemo(() => {
     const sorted = [...store.exams].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -68,6 +139,25 @@ function StudentDetailPage() {
             position: fixed !important; top: 0 !important; left: 0 !important;
             width: 100% !important; height: auto !important; padding: 32px 40px !important;
             background: white !important; color: black !important; z-index: 9999 !important;
+          }
+          #student-print-area table {
+            border-collapse: collapse !important;
+            width: 100% !important;
+          }
+          #student-print-area th {
+            background: #f5f5f5 !important;
+            color: #000 !important;
+            font-weight: 600 !important;
+            padding: 8px 12px !important;
+            border: 1px solid #ddd !important;
+          }
+          #student-print-area td {
+            padding: 6px 12px !important;
+            border: 1px solid #ddd !important;
+            color: #000 !important;
+          }
+          #student-print-area tr {
+            page-break-inside: avoid !important;
           }
           .print-hide { display: none !important; }
           .print-card { box-shadow: none !important; border: none !important; background: transparent !important; }
@@ -263,52 +353,84 @@ function StudentDetailPage() {
             </Card>
 
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Wallet className="h-4 w-4 text-muted-foreground" /> Fee Record
-                </CardTitle>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Wallet className="h-4 w-4 text-muted-foreground" /> Fee Record
+                  </CardTitle>
+                  <div className="hidden md:flex items-center gap-6 text-xs text-muted-foreground">
+                    <span>Total debit: <strong className="text-foreground">{formatKES(totalDebit)}</strong></span>
+                    <span>Total credit: <strong className="text-foreground">{formatKES(totalCredit)}</strong></span>
+                    <span>Balance: <strong className={closingBalance > 0 ? "text-destructive" : "text-success"}>{formatKES(closingBalance)}</strong></span>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent className="p-0">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Term</TableHead>
-                      <TableHead className="text-right">Fee paid</TableHead>
-                      <TableHead className="text-right">Amount expected</TableHead>
-                      <TableHead className="text-right">Balance</TableHead>
-                      <TableHead>Date/time paid</TableHead>
+                      <TableHead className="w-36">Date</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead className="text-right w-28">Debit (KES)</TableHead>
+                      <TableHead className="text-right w-28">Credit (KES)</TableHead>
+                      <TableHead className="text-right w-28">Balance (KES)</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {fee.carriedForward > 0 && (
-                      <TableRow className="bg-warning/5">
-                        <TableCell><Badge variant="outline" className="border-warning/30 text-warning-foreground">Carried forward</Badge></TableCell>
-                        <TableCell className="text-right tabular-nums font-medium text-warning-foreground">{formatKES(fee.carriedForward)}</TableCell>
-                        <TableCell className="text-right tabular-nums">—</TableCell>
-                        <TableCell className="text-right tabular-nums"><span className="text-warning-foreground font-medium">{formatKES(fee.carriedForward)}</span></TableCell>
-                        <TableCell className="text-muted-foreground">From previous year</TableCell>
+                    {ledgerEntries.length === 1 && ledgerEntries[0].id === "empty" ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground">
+                          No fee records.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      ledgerEntries.map((entry, i) => (
+                        <TableRow
+                          key={entry.id}
+                          className={
+                            entry.id === "cf"
+                              ? "bg-warning/5"
+                              : entry.debit > 0
+                                ? "bg-muted/30"
+                                : ""
+                          }
+                        >
+                          <TableCell className="text-xs text-muted-foreground">{entry.date}</TableCell>
+                          <TableCell className="text-sm">{entry.description}</TableCell>
+                          <TableCell className="text-right tabular-nums font-medium">
+                            {entry.debit > 0 ? formatKES(entry.debit) : "—"}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums font-medium text-success">
+                            {entry.credit > 0 ? formatKES(entry.credit) : "—"}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums font-semibold">
+                            {entry.balance > 0 ? (
+                              <span className="text-destructive">{formatKES(entry.balance)}</span>
+                            ) : entry.balance < 0 ? (
+                              <span className="text-success">{formatKES(Math.abs(entry.balance))} CR</span>
+                            ) : (
+                              <span className="text-success">Cleared</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                    {ledgerEntries.length > 1 && (
+                      <TableRow className="border-t-2 border-border font-semibold bg-muted/50">
+                        <TableCell colSpan={2} className="text-sm">Totals</TableCell>
+                        <TableCell className="text-right tabular-nums">{formatKES(totalDebit)}</TableCell>
+                        <TableCell className="text-right tabular-nums text-success">{formatKES(totalCredit)}</TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {closingBalance > 0 ? (
+                            <span className="text-destructive">{formatKES(closingBalance)}</span>
+                          ) : closingBalance < 0 ? (
+                            <span className="text-success">{formatKES(Math.abs(closingBalance))} CR</span>
+                          ) : (
+                            <span className="text-success">Cleared</span>
+                          )}
+                        </TableCell>
                       </TableRow>
                     )}
-                    {payments.length === 0 && !fee.carriedForward && (
-                      <TableRow><TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground">No fee payments recorded.</TableCell></TableRow>
-                    )}
-                    {payments.length === 0 && fee.carriedForward > 0 && (
-                      <TableRow><TableCell colSpan={5} className="py-4 text-center text-sm text-muted-foreground">No payments this year yet.</TableCell></TableRow>
-                    )}
-                    {payments.map((payment) => {
-                      const expected = expectedFor(payment.term);
-                      const paid = paidFor(payment.term);
-                      const bal = Math.max(0, expected - paid);
-                      return (
-                        <TableRow key={payment.id}>
-                          <TableCell><Badge variant="outline">Term {payment.term}</Badge></TableCell>
-                          <TableCell className="text-right tabular-nums font-medium">{formatKES(payment.amount)}</TableCell>
-                          <TableCell className="text-right tabular-nums">{formatKES(expected)}</TableCell>
-                          <TableCell className="text-right tabular-nums">{bal <= 0 ? <span className="text-success font-medium">Cleared</span> : <span className="text-destructive">{formatKES(bal)}</span>}</TableCell>
-                          <TableCell className="text-muted-foreground">{new Date(payment.date).toLocaleString()}</TableCell>
-                        </TableRow>
-                      );
-                    })}
                   </TableBody>
                 </Table>
               </CardContent>
