@@ -60,9 +60,10 @@ function StudentDetailPage() {
 
   const ledgerEntries = useMemo(() => {
     const entries: LedgerEntry[] = [];
-    let running = fee.carriedForward;
+    let running = 0;
 
     if (fee.carriedForward > 0) {
+      running += fee.carriedForward;
       entries.push({
         id: "cf",
         date: "Previous year",
