@@ -933,7 +933,8 @@ export function feeStatusForStudent(studentId: ID) {
   const paidCarriedForward = st.paidCarriedForward ?? 0;
   const paidTotal = Math.max(0, allPaymentsTotal - paidCarriedForward);
   const balanceTotal = expectedTotal - paidTotal;
-  const expectedByTerm: Record<Term, number> = st.feePerYear
+  const hasCustomFee = st.feePerYear != null && st.feePerYear > 0 && st.feePerYear !== cls?.feePerYear;
+  const expectedByTerm: Record<Term, number> = hasCustomFee
     ? { 1: perTerm, 2: perTerm, 3: perTerm }
     : {
         1: cls?.feeTerm1 ?? perTerm,
