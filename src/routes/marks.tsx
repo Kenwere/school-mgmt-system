@@ -27,7 +27,7 @@ function MarksPage() {
   const cls = store.classes.find((c) => c.id === classId);
   const subjects = cls?.subjects ?? [];
   const students = useMemo(
-    () => store.students.filter((s) => s.classId === classId),
+    () => store.students.filter((s) => s.active !== false && s.classId === classId),
     [store.students, classId],
   );
 

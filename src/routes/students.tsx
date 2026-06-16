@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Edit3, Trash2, Upload, X } from "lucide-react";
+import { Plus, Edit3, Trash2, Upload, X, Ban, CheckCircle } from "lucide-react";
 import { addStudent, deleteStudent, formatKES, updateStudent, useStore, type Student } from "@/lib/store";
 
 export const Route = createFileRoute("/students")({
@@ -227,9 +227,14 @@ function StudentsPage() {
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">
-                        <Link to="/student/$studentId" params={{ studentId: s.id }} className="hover:underline">
-                          {s.name}
-                        </Link>
+                        <div className="flex items-center gap-2">
+                          <Link to="/student/$studentId" params={{ studentId: s.id }} className="hover:underline">
+                            {s.name}
+                          </Link>
+                          {!s.active && (
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-destructive border border-destructive/30 rounded px-1.5 py-0.5">Disabled</span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>{cls?.name ?? "—"}</TableCell>
                       <TableCell className="text-right tabular-nums">
@@ -239,6 +244,9 @@ function StudentsPage() {
                       <TableCell>{s.parent}</TableCell>
                       <TableCell>{s.phone}</TableCell>
                       <TableCell className="text-right">
+                        <Button size="icon" variant="ghost" onClick={(event) => { event.stopPropagation(); updateStudent(s.id, { active: !s.active }); }}>
+                          {s.active ? <Ban className="h-4 w-4 text-muted-foreground" /> : <CheckCircle className="h-4 w-4 text-success" />}
+                        </Button>
                         <Button size="icon" variant="ghost" onClick={(event) => { event.stopPropagation(); openEdit(s); }}><Edit3 className="h-4 w-4" /></Button>
                         <Button size="icon" variant="ghost" onClick={(event) => { event.stopPropagation(); if (confirm(`Delete ${s.name}?`)) deleteStudent(s.id); }}>
                           <Trash2 className="h-4 w-4 text-destructive" />

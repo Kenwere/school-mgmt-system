@@ -42,6 +42,7 @@ export type Student = {
   name: string;
   gender: string;
   classId: ID;
+  active: boolean;
   feePerYear?: number;
   carriedForward?: number;
   paidCarriedForward?: number;
@@ -291,6 +292,7 @@ export function initializeStoreFromSupabase() {
         name: row.name,
         gender: row.gender,
         classId: row.class_id ?? "",
+        active: row.active !== false,
         feePerYear: row.fee_per_year == null ? undefined : Number(row.fee_per_year),
         carriedForward: row.carried_forward == null ? undefined : Number(row.carried_forward),
         paidCarriedForward: row.paid_carried_forward == null ? undefined : Number(row.paid_carried_forward),
@@ -522,9 +524,9 @@ export async function deleteClass(id: ID) {
 }
 
 // --- Students ---
-export async function addStudent(st: Omit<Student, "id">) {
+export async function addStudent(st: Omit<Student, "id" | "active">) {
   const db = requireSupabase();
-  const item = { ...st, id: uid() };
+  const item = { ...st, id: uid(), active: true };
   const { error } = await db.from("students").insert({
     id: item.id,
     school_id: SCHOOL_ID,
@@ -532,6 +534,7 @@ export async function addStudent(st: Omit<Student, "id">) {
     name: item.name,
     gender: item.gender,
     class_id: item.classId || null,
+    active: true,
     fee_per_year: item.feePerYear ?? null,
     carried_forward: item.carriedForward ?? null,
     paid_carried_forward: item.paidCarriedForward ?? null,
@@ -551,6 +554,7 @@ export async function updateStudent(id: ID, patch: Partial<Student>) {
     ...(patch.name !== undefined ? { name: patch.name } : {}),
     ...(patch.gender !== undefined ? { gender: patch.gender } : {}),
     ...(patch.classId !== undefined ? { class_id: patch.classId || null } : {}),
+    ...(patch.active !== undefined ? { active: patch.active } : {}),
     ...(patch.feePerYear !== undefined ? { fee_per_year: patch.feePerYear ?? null } : {}),
     ...(patch.carriedForward !== undefined ? { carried_forward: patch.carriedForward ?? null } : {}),
     ...(patch.paidCarriedForward !== undefined ? { paid_carried_forward: patch.paidCarriedForward ?? null } : {}),
@@ -887,7 +891,7 @@ export function gradeFromScore(score: number): string {
 
 export function rankingForExam(examId: ID, classId?: ID) {
   const s = state;
-  const students = classId ? s.students.filter((x) => x.classId === classId) : s.students;
+  const students = classId ? s.students.filter((x) => x.active !== false && x.classId === classId) : s.students.filter((x) => x.active !== false);
   const rows = students.map((st) => {
     const ms = s.marks.filter((m) => m.examId === examId && m.studentId === st.id);
     const total = ms.reduce((a, b) => a + b.score, 0);

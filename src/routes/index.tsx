@@ -384,12 +384,13 @@ function FooterCol({ title, links }: { title: string; links: string[] }) {
 
 function Dashboard() {
   const store = useStore();
-  const studentCount = store.students.length;
+  const activeStudents = store.students.filter((s) => s.active !== false);
+  const studentCount = activeStudents.length;
   const classCount = store.classes.length;
   const examCount = store.exams.length;
   const teacherCount = store.users.filter((u) => u.role === "teacher").length;
 
-  const feeAgg = store.students.reduce(
+  const feeAgg = activeStudents.reduce(
     (acc, st) => {
       const fs = feeStatusForStudent(st.id);
       if (!fs) return acc;
@@ -402,7 +403,7 @@ function Dashboard() {
 
   const studentsByClass = store.classes.map((c) => ({
     name: c.name,
-    count: store.students.filter((s) => s.classId === c.id).length,
+    count: activeStudents.filter((s) => s.classId === c.id).length,
   }));
 
   return (

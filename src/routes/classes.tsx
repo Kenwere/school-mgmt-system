@@ -201,7 +201,7 @@ function ClassesPage() {
           </p>
         )}
         {store.classes.map((c) => {
-          const students = store.students.filter((s) => s.classId === c.id).length;
+          const students = store.students.filter((s) => s.active !== false && s.classId === c.id).length;
           return (
             <Card key={c.id} className="hover:shadow-md transition-shadow">
               <CardHeader className="pb-2">

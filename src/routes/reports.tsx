@@ -152,7 +152,7 @@ function FeeStatements({ school }: { school: any }) {
   const [classId, setClassId] = useState("all");
 
   const rows = store.students
-    .filter((s) => classId === "all" || s.classId === classId)
+    .filter((s) => s.active !== false && (classId === "all" || s.classId === classId))
     .map((s) => {
       const f = feeStatusForStudent(s.id);
       return { s, f };
@@ -229,7 +229,7 @@ function FeeStatements({ school }: { school: any }) {
 function StudentList({ school }: { school: any }) {
   const store = useStore();
   const [classId, setClassId] = useState("all");
-  const students = store.students.filter((s) => classId === "all" || s.classId === classId);
+  const students = store.students.filter((s) => s.active !== false && (classId === "all" || s.classId === classId));
   return (
     <Card className="mt-4">
       <CardHeader className="print:hidden">
@@ -305,7 +305,7 @@ function ClassList({ school }: { school: any }) {
                 <TableCell>{c.stream ?? "—"}</TableCell>
                 <TableCell>{c.teacher ?? "—"}</TableCell>
                 <TableCell>{c.room ?? "—"}</TableCell>
-                <TableCell className="text-right tabular-nums">{store.students.filter((s) => s.classId === c.id).length}</TableCell>
+                <TableCell className="text-right tabular-nums">{store.students.filter((s) => s.active !== false && s.classId === c.id).length}</TableCell>
                 <TableCell className="text-right tabular-nums">{formatKES(c.feePerYear)}</TableCell>
                 <TableCell className="text-right tabular-nums">{formatKES(c.feePerYear / 3)}</TableCell>
               </TableRow>

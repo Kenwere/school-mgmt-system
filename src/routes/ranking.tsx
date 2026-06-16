@@ -34,9 +34,10 @@ function RankingPage() {
   const subjects = cls?.subjects ?? [];
 
   const students = useMemo(
-    () => classId === "all"
+    () => (classId === "all"
       ? store.students
-      : store.students.filter((s) => s.classId === classId),
+      : store.students.filter((s) => s.classId === classId)
+    ).filter((s) => s.active !== false),
     [store.students, classId],
   );
 

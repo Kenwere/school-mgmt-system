@@ -37,6 +37,7 @@ function FeesPage() {
   const [receiptPaymentId, setReceiptPaymentId] = useState<string | null>(null);
 
   const students = store.students.filter((s) => {
+    if (s.active === false) return false;
     if (!classFilter) return false;
     if (classFilter !== "all" && s.classId !== classFilter) return false;
     if (search && !`${s.name} ${s.admissionNo}`.toLowerCase().includes(search.toLowerCase())) return false;

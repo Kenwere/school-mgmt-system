@@ -1,6 +1,6 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { useMemo } from "react";
-import { ArrowLeft, Printer, Wallet, TrendingUp, AlertCircle, CheckCircle2, GraduationCap, Phone, Mail, Users, Hash, User2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ArrowLeft, Printer, Wallet, TrendingUp, AlertCircle, CheckCircle2, GraduationCap, Phone, Mail, Users, Hash, User2, Ban, CheckCircle } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { PermissionGate } from "@/components/permission-gate";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { feeStatusForStudent, formatKES, useStore, type Term } from "@/lib/store";
+import { feeStatusForStudent, formatKES, updateStudent, useStore, type Term } from "@/lib/store";
 
 type LedgerEntry = {
   id: string;
@@ -47,6 +47,16 @@ function StudentDetailPage() {
   }
 
   const isCleared = fee.balanceOwing <= 0;
+  const [toggling, setToggling] = useState(false);
+
+  const toggleActive = async () => {
+    setToggling(true);
+    try {
+      await updateStudent(student.id, { active: !student.active });
+    } finally {
+      setToggling(false);
+    }
+  };
 
   const ledgerEntries = useMemo(() => {
     const entries: LedgerEntry[] = [];
@@ -188,6 +198,11 @@ function StudentDetailPage() {
                   <Badge variant="outline" className={`w-fit ${isCleared ? "bg-success/10 text-success border-success/30" : "bg-warning/10 text-warning-foreground border-warning/30"}`}>
                     {isCleared ? "Fees cleared" : "Fees owing"}
                   </Badge>
+                  {!student.active && (
+                    <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/30">
+                      Disabled
+                    </Badge>
+                  )}
                 </div>
                 <p className="text-sm text-muted-foreground mt-1">{fee.class?.name ?? "No class"} · {student.admissionNo}</p>
                 <div className="flex flex-wrap gap-4 mt-3 text-sm">
@@ -208,7 +223,16 @@ function StudentDetailPage() {
                   )}
                 </div>
               </div>
-              <div className="print-hide">
+              <div className="print-hide flex items-center gap-2">
+                <Button
+                  variant={student.active ? "destructive" : "outline"}
+                  size="sm"
+                  onClick={toggleActive}
+                  disabled={toggling}
+                >
+                  {student.active ? <Ban className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
+                  {student.active ? "Disable" : "Enable"}
+                </Button>
                 <Button variant="outline" size="sm" onClick={() => window.print()}>
                   <Printer className="h-4 w-4" /> Print
                 </Button>

@@ -27,7 +27,7 @@ function PromotionPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
 
-  const students = store.students.filter((s) => s.classId === sourceClassId);
+  const students = store.students.filter((s) => s.active !== false && s.classId === sourceClassId);
   const allSelected = students.length > 0 && selected.size === students.length;
 
   const toggleAll = () => {

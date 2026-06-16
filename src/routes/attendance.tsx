@@ -37,9 +37,10 @@ function AttendancePage() {
   const weeks = getWeeksInMonth(year, month);
   const [weekStart, setWeekStart] = useState(getWeekStart(today));
 
-  const students = classId === "all"
+  const students = (classId === "all"
     ? store.students
-    : store.students.filter((s) => s.classId === classId);
+    : store.students.filter((s) => s.classId === classId)
+  ).filter((s) => s.active !== false);
 
   const records = attendanceForWeek(weekStart);
   const recordMap = new Map(records.map((r) => [r.studentId, r.status]));
