@@ -58,7 +58,7 @@ const groups: { label: string; items: Item[] }[] = [
     label: "Finance & reports",
     items: [
       { title: "Fees", url: "/fees", icon: Wallet },
-      { title: "Ranking", url: "/ranking", icon: Award },
+
       { title: "Reports", url: "/reports", icon: FileText },
     ],
   },

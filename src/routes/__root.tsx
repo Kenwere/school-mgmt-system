@@ -180,7 +180,7 @@ function RootShellContent() {
                 <Button variant="ghost" size="icon" className="relative">
                 <Bell className="h-4 w-4" />
               </Button>
-              <div className="hidden sm:flex items-center gap-2 rounded-md px-2 py-1">
+              <Link to="/profile" className="hidden sm:flex items-center gap-2 rounded-md px-2 py-1 hover:bg-muted/50 transition-colors">
                 <Avatar className="h-8 w-8">
                   <AvatarFallback className="bg-primary text-primary-foreground text-xs">{initials}</AvatarFallback>
                 </Avatar>
@@ -188,7 +188,7 @@ function RootShellContent() {
                   <div className="font-medium">{auth.user!.name}</div>
                   <div className="text-muted-foreground capitalize">{auth.user!.role}</div>
                 </div>
-              </div>
+              </Link>
               <Button variant="outline" size="sm" onClick={auth.signOut}>
                 Sign out
               </Button>
