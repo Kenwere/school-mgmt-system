@@ -71,6 +71,7 @@ export type Payment = {
   id: ID;
   studentId: ID;
   amount: number;
+  term: Term;
   date: string;
   method: string;
   ref?: string;
@@ -329,6 +330,7 @@ export function initializeStoreFromSupabase() {
         id: row.id,
         studentId: row.student_id,
         amount: Number(row.amount ?? 0),
+        term: (row.term as Term) ?? 1,
         date: row.paid_at ?? row.date,
         method: row.method,
         ref: row.ref ?? undefined,
@@ -769,7 +771,7 @@ export async function addPayment(p: Omit<Payment, "id">) {
     id: item.id,
     school_id: SCHOOL_ID,
     student_id: item.studentId,
-    term: 1,
+    term: item.term,
     amount: item.amount,
     date: dateStr,
     paid_at: paidAt,
@@ -811,6 +813,7 @@ export async function updatePayment(id: ID, patch: Partial<Payment>) {
     ...(patch.date !== undefined ? { date: patch.date.slice(0, 10), paid_at: patch.date } : {}),
     ...(patch.method !== undefined ? { method: patch.method } : {}),
     ...(patch.ref !== undefined ? { ref: patch.ref ?? null } : {}),
+    ...(patch.term !== undefined ? { term: patch.term } : {}),
     updated_at: now,
   };
   const { error } = await db.from("payments").update(dbPatch).eq("id", id);

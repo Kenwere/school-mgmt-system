@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Edit3, Printer, Search, Trash2, Wallet } from "lucide-react";
-import { addPayment, deletePayment, studentFeeLedger, formatKES, updatePayment, useStore, type Payment } from "@/lib/store";
+import { addPayment, deletePayment, studentFeeLedger, formatKES, updatePayment, useStore, type Term, type Payment } from "@/lib/store";
 
 export const Route = createFileRoute("/fees")({
   head: () => ({ meta: [{ title: "Fees — School Management" }] }),
@@ -32,6 +32,7 @@ function FeesPage() {
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState("M-Pesa");
   const [ref, setRef] = useState("");
+  const [term, setTerm] = useState<Term>(1);
   const [date, setDate] = useState(toDateTimeLocal(new Date()));
   const [receiptPaymentId, setReceiptPaymentId] = useState<string | null>(null);
 
@@ -54,6 +55,7 @@ function FeesPage() {
     setStudentId(sid);
     setAmount("");
     setRef("");
+    setTerm(1);
     setDate(toDateTimeLocal(new Date()));
     setOpen(true);
   };
@@ -63,6 +65,7 @@ function FeesPage() {
     setStudentId(payment.studentId);
     setAmount(String(payment.amount));
     setMethod(payment.method);
+    setTerm(payment.term);
     setRef(payment.ref ?? "");
     setDate(toDateTimeLocal(new Date(payment.date)));
     setOpen(true);
@@ -74,6 +77,7 @@ function FeesPage() {
     const payload = {
       studentId,
       amount: amt,
+      term,
       method,
       ref: ref.trim() || undefined,
       date,
@@ -230,20 +234,21 @@ function FeesPage() {
         <Card>
           <CardHeader><CardTitle className="text-base">Recent payments</CardTitle></CardHeader>
           <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Student</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead>Method</TableHead>
-                  <TableHead>Ref</TableHead>
-                  <TableHead></TableHead>
-                </TableRow>
-              </TableHeader>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Student</TableHead>
+                    <TableHead>Term</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>Method</TableHead>
+                    <TableHead>Ref</TableHead>
+                    <TableHead></TableHead>
+                  </TableRow>
+                </TableHeader>
               <TableBody>
                 {store.payments.length === 0 && (
-                  <TableRow><TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-6">No payments recorded.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-6">No payments recorded.</TableCell></TableRow>
                 )}
                 {[...store.payments].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 30).map((p) => {
                   const s = store.students.find((x) => x.id === p.studentId);
@@ -251,6 +256,7 @@ function FeesPage() {
                     <TableRow key={p.id}>
                         <TableCell>{new Date(p.date).toLocaleString()}</TableCell>
                       <TableCell>{s?.name ?? "—"}</TableCell>
+                      <TableCell>Term {p.term}</TableCell>
                       <TableCell className="text-right tabular-nums">{formatKES(p.amount)}</TableCell>
                       <TableCell>{p.method}</TableCell>
                       <TableCell className="font-mono text-xs">{p.ref ?? "—"}</TableCell>
@@ -280,30 +286,42 @@ function FeesPage() {
             <DialogTitle>{editingPaymentId ? "Edit payment" : "Record payment"}</DialogTitle>
             <DialogDescription>{selectedStudent ? `${selectedStudent.name} · ${selectedStudent.admissionNo}` : "Select a student"}</DialogDescription>
           </DialogHeader>
-          {selectedFee && (
-            <div className="grid gap-3 rounded-md border p-3 text-sm sm:grid-cols-3">
-              <div><div className="text-xs text-muted-foreground">Total debited</div><div className="font-medium">{formatKES(selectedFee.totalDebit)}</div></div>
-              <div><div className="text-xs text-muted-foreground">Total paid</div><div className="font-medium">{formatKES(selectedFee.totalCredit)}</div></div>
-              <div><div className="text-xs text-muted-foreground">Balance</div><div className="font-medium">{formatKES(selectedFee.balanceOwing)}</div></div>
-            </div>
-          )}
-          <div className="grid gap-4 py-4 sm:grid-cols-2">
-            <div className="space-y-2"><Label>Amount (KES)</Label><Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} /></div>
-            <div className="space-y-2">
-              <Label>Method</Label>
-              <Select value={method} onValueChange={setMethod}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="M-Pesa">M-Pesa</SelectItem>
-                  <SelectItem value="Bank">Bank</SelectItem>
-                  <SelectItem value="Cash">Cash</SelectItem>
-                  <SelectItem value="Cheque">Cheque</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2"><Label>Date/time paid</Label><Input type="datetime-local" value={date} onChange={(e) => setDate(e.target.value)} /></div>
-            <div className="space-y-2 sm:col-span-2"><Label>Reference (optional)</Label><Input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="e.g. MPESA QHJ123ABC" /></div>
-          </div>
+      {selectedFee && (
+        <div className="grid gap-3 rounded-md border p-3 text-sm sm:grid-cols-4">
+          <div><div className="text-xs text-muted-foreground">Total debited</div><div className="font-medium">{formatKES(selectedFee.totalDebit)}</div></div>
+          <div><div className="text-xs text-muted-foreground">Total paid</div><div className="font-medium">{formatKES(selectedFee.totalCredit)}</div></div>
+          <div><div className="text-xs text-muted-foreground">Balance</div><div className="font-medium">{formatKES(selectedFee.balanceOwing)}</div></div>
+          <div><div className="text-xs text-muted-foreground">Expected for T{term}</div><div className="font-medium">{formatKES(selectedFee.class?.[term === 1 ? "feeTerm1" : term === 2 ? "feeTerm2" : "feeTerm3"] ?? 0)}</div></div>
+        </div>
+      )}
+      <div className="grid gap-4 py-4 sm:grid-cols-2">
+        <div className="space-y-2"><Label>Amount (KES)</Label><Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} /></div>
+        <div className="space-y-2">
+          <Label>Term</Label>
+          <Select value={String(term)} onValueChange={(v) => setTerm(Number(v) as Term)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1">Term 1</SelectItem>
+              <SelectItem value="2">Term 2</SelectItem>
+              <SelectItem value="3">Term 3</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Method</Label>
+          <Select value={method} onValueChange={setMethod}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="M-Pesa">M-Pesa</SelectItem>
+              <SelectItem value="Bank">Bank</SelectItem>
+              <SelectItem value="Cash">Cash</SelectItem>
+              <SelectItem value="Cheque">Cheque</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2"><Label>Date/time paid</Label><Input type="datetime-local" value={date} onChange={(e) => setDate(e.target.value)} /></div>
+        <div className="space-y-2 sm:col-span-2"><Label>Reference (optional)</Label><Input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="e.g. MPESA QHJ123ABC" /></div>
+      </div>
           <DialogFooter>
             {editingPaymentId && (
               <Button
@@ -377,6 +395,7 @@ function PaymentReceipt({
         <ReceiptLine label="Total fee charged" value={formatKES(amountExpected)} />
         <ReceiptLine label="Amount paid" value={formatKES(payment.amount)} />
         <ReceiptLine label="Balance" value={formatKES(balance)} />
+        <ReceiptLine label="Term" value={`Term ${payment.term}`} />
         <ReceiptLine label="Payment method" value={payment.method} />
         <ReceiptLine label="Reference" value={payment.ref ?? "-"} />
         <ReceiptLine label="Date paid" value={new Date(payment.date).toLocaleString()} />
